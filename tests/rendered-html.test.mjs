@@ -26,6 +26,8 @@ test("server-renders the finished Paris game shell", async () => {
   assert.match(html, /PARIS,/);
   assert.match(html, /NOUVELLE VIE/);
   assert.match(html, /Новая история/);
+  assert.match(html, /translate="no"/);
+  assert.match(html, /name="google" content="notranslate"/);
   assert.doesNotMatch(html, /codex-preview|Building your site|react-loading-skeleton/i);
 });
 
