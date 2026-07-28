@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import metroSchematic from "./game/paris-metro-schematic.json";
 
 type Phase = "intro" | "setup" | "route" | "game" | "test" | "ending";
 type Gender = "Женщина" | "Мужчина" | "Другое";
@@ -104,6 +105,28 @@ type DialogueDef = {
   choices: DialogueChoice[];
 };
 
+type DialogueRound = {
+  prompt: string;
+  choices: DialogueChoice[];
+};
+
+type DialogueMission = {
+  id: string;
+  kind: "ПОРУЧЕНИЕ" | "РАЗУЗНАТЬ" | "ЛИЧНАЯ ИСТОРИЯ";
+  title: string;
+  goal: string;
+  task: string;
+  knowledge: string;
+  durationMinutes: number;
+};
+
+type NpcAssignment = {
+  missionId: string;
+  title: string;
+  task: string;
+  knowledge: string;
+};
+
 type CityEvent = {
   id: string;
   kicker: string;
@@ -193,6 +216,8 @@ type SavedGame = {
   completedDailyTaskIds?: string[];
   chapterProgressPoints?: number;
   npcDialogueProgress?: Record<string, number>;
+  relationships?: Record<string, number>;
+  npcAssignments?: Record<string, NpcAssignment>;
 };
 
 const STORAGE_KEY = "paris-nouvelle-vie-save-v1";
@@ -562,8 +587,112 @@ const moreDialogues: Record<string, DialogueDef[]> = {
   ],
 };
 
+const dialogueMissions: Record<string, DialogueMission[]> = {
+  claire: [
+    { id: "claire-neighbours", kind: "РАЗУЗНАТЬ", title: "Код подъезда", goal: "Понять неписаные правила дома и представиться соседям.", task: "Поздороваться с консьержкой и оставить имя на почтовом ящике.", knowledge: "Всё о мусоре, тишине и gardien можно узнать на доске у лифта.", durationMinutes: 16 },
+    { id: "claire-apartment", kind: "ПОРУЧЕНИЕ", title: "Старая мансарда", goal: "Разобраться с отоплением и не платить за чужой ремонт.", task: "Сфотографировать счётчик, кран и трещину; попросить у хозяина акт вселения.", knowledge: "Неисправность лучше фиксировать письменно до первой оплаты.", durationMinutes: 18 },
+    { id: "claire-building", kind: "ЛИЧНАЯ ИСТОРИЯ", title: "Стать соседом", goal: "Выйти из роли «новенького» и заявить о себе на собрании дома.", task: "Подготовить две фразы о шуме и общих charges для собрания жильцов.", knowledge: "Клэр сама когда-то боялась говорить на таких встречах.", durationMinutes: 22 },
+  ],
+  malik: [
+    { id: "malik-order", kind: "РАЗУЗНАТЬ", title: "Французский у стойки", goal: "Научиться делать заказ и не теряться из-за быстрой речи.", task: "Заказать напиток, уточнив sur place и способ оплаты, без английского.", knowledge: "Noisette — это эспрессо с каплей молока, а не ореховый кофе.", durationMinutes: 15 },
+    { id: "malik-shift", kind: "ПОРУЧЕНИЕ", title: "Субботняя смена", goal: "Получить первую реальную подработку и доверие Малика.", task: "Выйти на смену, выучить пять позиций меню и закрыть кассу по чек-листу.", knowledge: "Малик не любит импровизацию в счетах, но всегда защищает новичка перед грубым клиентом.", durationMinutes: 20 },
+    { id: "malik-stories", kind: "ЛИЧНАЯ ИСТОРИЯ", title: "Вечер историй", goal: "Рассказать о своём переезде и стать частью круга постоянных гостей.", task: "Принести одну фотографию и подготовить пятиминутную историю о первой ошибке в Париже.", knowledge: "Малик вырос здесь, но его родители тоже учились считывать новый город.", durationMinutes: 24 },
+  ],
+  ines: [
+    { id: "ines-presentation", kind: "ПОРУЧЕНИЕ", title: "Голос в аудитории", goal: "Взять устную часть презентации и не спрятаться за слайдами.", task: "Написать вступление на 90 секунд и дважды проговорить его с Инес.", knowledge: "В французской презентации лучше сразу объявить plan, чтобы слушатель не терялся.", durationMinutes: 18 },
+    { id: "ines-expose", kind: "РАЗУЗНАТЬ", title: "Неписаные правила Сорбонны", goal: "Понять, как ищут источники, спорят и делят работу в университете.", task: "Найти две статьи в Cairn и оформить bibliographie по образцу Инес.", knowledge: "Преподаватель ценит не сложные слова, а ясную логику и точные ссылки.", durationMinutes: 20 },
+    { id: "ines-seine", kind: "ЛИЧНАЯ ИСТОРИЯ", title: "Вне библиотеки", goal: "Перестать общаться с одногруппниками только об дедлайнах.", task: "Прийти на пикник у Сены и задать три вопроса не об учёбе.", knowledge: "Инес меняла факультет и помнит, каково чувствовать себя лишней в группе.", durationMinutes: 25 },
+  ],
+  bernard: [
+    { id: "bernard-originals", kind: "РАЗУЗНАТЬ", title: "Оригиналы и копии", goal: "Понять, что именно показывать в окне и что оставлять в досье.", task: "Собрать папку: оригинал → копия → перевод, и пронумеровать разделы.", knowledge: "Оригинал показывают для сверки, но обычно не оставляют в досье.", durationMinutes: 17 },
+    { id: "bernard-address", kind: "ПОРУЧЕНИЕ", title: "Justificatif de domicile", goal: "Закрыть раздел адреса без повторной записи.", task: "Принести договор, страховку жилья и свежий счёт с одинаковым написанием имени.", knowledge: "Разные варианты имени в документах лучше объяснить короткой запиской.", durationMinutes: 21 },
+    { id: "bernard-deadline", kind: "ЛИЧНАЯ ИСТОРИЯ", title: "По эту сторону окна", goal: "Научиться задавать точные вопросы и не воспринимать бюрократию как личную вражду.", task: "Записать номер обращения, крайний срок и следующее действие на одном листе.", knowledge: "Бернар стал чиновником, потому что сам видел, как неточный ответ ломает чей-то план.", durationMinutes: 24 },
+  ],
+  yuki: [
+    { id: "yuki-gesture", kind: "РАЗУЗНАТЬ", title: "Десять линий", goal: "Научиться замечать людей, а не только достопримечательности.", task: "Сделать три быстрых наброска прохожих, используя не более десяти линий на каждый.", knowledge: "Юки сначала смотрит на позу и темп, а лицо дорисовывает после.", durationMinutes: 16 },
+    { id: "yuki-view", kind: "ПОРУЧЕНИЕ", title: "Неоткрыточный Париж", goal: "Найти в районе место, которое ещё не стало туристическим штампом.", task: "Пройти от ступеней до rue des Abbesses без карты и принести один набросок местной сцены.", knowledge: "Лучший вид для Юки — не панорама, а прачечная, велосипед и двое спорящих соседей.", durationMinutes: 19 },
+    { id: "yuki-exhibit", kind: "ЛИЧНАЯ ИСТОРИЯ", title: "Место на стене", goal: "Решить, готов ли ты показать свою работу незнакомым людям.", task: "Выбрать один неидеальный, но честный рисунок и написать к нему три фразы на французском.", knowledge: "Юки долго не показывала свои работы из-за акцента, хотя рисункам акцент не мешал.", durationMinutes: 26 },
+  ],
+  luc: [
+    { id: "luc-one-room", kind: "РАЗУЗНАТЬ", title: "Один зал, одна история", goal: "Не пробежать Лувр как список и научиться смотреть медленно.", task: "Выбрать один зал, остаться на 20 минут и записать три детали одного предмета.", knowledge: "Под Лувром сохранились стены крепости XII века.", durationMinutes: 18 },
+    { id: "luc-context", kind: "ПОРУЧЕНИЕ", title: "До таблички", goal: "Научиться сначала строить свою гипотезу, а потом читать описание.", task: "Сравнить два портрета: положение рук, одежду и то, что автор хотел сообщить о герое.", knowledge: "Музейная табличка — ответ, но не замена собственному взгляду.", durationMinutes: 20 },
+    { id: "luc-school", kind: "ЛИЧНАЯ ИСТОРИЯ", title: "Музей твоим голосом", goal: "Провести первую мини-экскурсию и не прятаться за заученным текстом.", task: "Построить маршрут из трёх работ для школьной группы и задать в каждом зале один вопрос.", knowledge: "Люк стал историком после того, как скучная школьная экскурсия чуть не отвернула его от музеев.", durationMinutes: 27 },
+  ],
+  amina: [
+    { id: "amina-saturday", kind: "ПОРУЧЕНИЕ", title: "Два часа помощи", goal: "Понять, как устроен центр, и взять конкретную роль в субботу.", task: "Прийти к 10:00, отсортировать одежду и собрать два набора по списку семей.", knowledge: "Центр принимает не всё подряд: каждая вещь должна решать реальную потребность.", durationMinutes: 18 },
+    { id: "amina-welcome", kind: "РАЗУЗНАТЬ", title: "Встретить новичка", goal: "Превратить свой опыт растерянности в понятную помощь другому.", task: "Объяснить новой семье три первых шага: адрес, страховка, rendez-vous — и оставить контакт центра.", knowledge: "Люди лучше запоминают три следующих шага, чем пятнадцать пунктов на одном листе.", durationMinutes: 21 },
+    { id: "amina-project", kind: "ЛИЧНАЯ ИСТОРИЯ", title: "Своя акция", goal: "Перейти от помощи по инструкции к собственной маленькой инициативе.", task: "Написать план обмена книгами: место, время, три роли волонтёров и объявление на простом французском.", knowledge: "Амина не просит делать всё самому: сильное сообщество начинается с распределения ответственности.", durationMinutes: 28 },
+  ],
+  thomas: [
+    { id: "thomas-pitch", kind: "РАЗУЗНАТЬ", title: "Не просто «мне нужна работа»", goal: "Сформулировать, чем ты полезен команде, не скрывая свою мотивацию.", task: "Записать самопрезентацию на 60 секунд: опыт, один результат в цифрах и причина выбора компании.", knowledge: "Во французском интервью конкретный пример важнее пяти абстрактных качеств.", durationMinutes: 17 },
+    { id: "thomas-cv", kind: "ПОРУЧЕНИЕ", title: "Резюме с доказательствами", goal: "Переписать CV так, чтобы каждая строка показывала результат.", task: "Переписать три пункта CV по формуле: действие → масштаб → измеримый результат.", knowledge: "Адаптация к новой стране — это навык, если описать его через конкретные задачи.", durationMinutes: 22 },
+    { id: "thomas-future", kind: "ЛИЧНАЯ ИСТОРИЯ", title: "Три года вперёд", goal: "Соединить карьерный план с реальной жизнью, а не с фразой для интервью.", task: "Составить план на 12 месяцев: должность, уровень языка, один новый навык и резервный сценарий.", knowledge: "Тома когда-то выбрал безопасную работу и сожалел, что не спросил себя, какой жизни он хочел.", durationMinutes: 26 },
+  ],
+};
+
+const dialogueFollowUps: Record<string, DialogueRound[][]> = {
+  claire: [
+    [{ prompt: "Клэр показывает на двери. «Кому ты представишься сегодня первым?»", choices: [{ label: "Gardienne — она знает весь дом.", response: "«Верно. И назови имя медленно — она запишет его для почты».", effects: { french: 2, admin: 2 } }, { label: "Соседу с собакой — он выглядит добро.", response: "«Это Марсель. Спроси имя собаки — он будет счастлив вдвойне».", effects: { assimilation: 3 } }] }, { prompt: "«И последнее: что сделаешь, если тебе мешает шум?»", choices: [{ label: "Сначала спокойно поговорю.", response: "«Именно. Записка под дверью тоже работает, если ты пока не уверен в речи».", effects: { french: 2, stability: 2 } }, { label: "Попрошу тебя пойти со мной.", response: "«Первый раз — да. Второй раз ты уже сможешь сам».", effects: { assimilation: 2, stability: 3 } }] }],
+    [{ prompt: "«Слышишь этот стук? Начнём не с паники, а с диагноза».", choices: [{ label: "Проверю кран и сниму видео.", response: "«Отлично. Дата и звук на видео сильнее фразы “мне кажется”».", effects: { admin: 3 } }, { label: "Сразу напишу хозяину.", response: "«Напиши, но приложи факты. Иначе он ответит одной вежливой фразой».", effects: { french: 2, admin: 2 } }] }, { prompt: "Клэр видит трещину у окна. «Она была в acte d’état des lieux?»", choices: [{ label: "Проверю акт до первой оплаты.", response: "«Вот и задание. Если её нет — отправь фото сегодня».", effects: { admin: 3, stability: 2 } }, { label: "Может, не стоит портить отношения с хозяином?", response: "«Спокойная фиксация — не конфликт. Это память для вас обоих».", effects: { stability: 3, french: 2 } }] }],
+    [{ prompt: "«На собрании будут говорить быстро. Как не потеряешься?»", choices: [{ label: "Запрошу повестку и выпишу термины.", response: "«Хорошо. Charges, travaux, vote — этого уже хватит, чтобы следить за разговором».", effects: { french: 4, admin: 2 } }, { label: "Попрошу тебя переводить всё.", response: "«Я помогу в критический момент, но не отдам тебе твой голос».", effects: { french: 2, assimilation: 2 } }] }, { prompt: "«О чём ты сам хочешь сказать соседям?»", choices: [{ label: "О шуме после полуночи — мне важно спать.", response: "«Ясная просьба без обвинений. Я сяду рядом, но говорить будешь ты».", effects: { stability: 4, assimilation: 2 } }, { label: "Предложу общую полку для книг.", response: "«Вот это уже не просьба новичка, а идея соседа».", effects: { assimilation: 5, stability: 2 } }] }],
+  ],
+  malik: [
+    [{ prompt: "«Клиент сказал serré. Что ты понял?»", choices: [{ label: "Короткий и крепкий эспрессо.", response: "«Exactement. И не наливай его до края».", effects: { french: 3 } }, { label: "Кофе с молоком?", response: "«Это noisette. Лучше переспросить, чем испортить напиток».", effects: { french: 2 } }] }, { prompt: "«А теперь я говорю очень быстро: sur place ou à emporter?»", choices: [{ label: "Sur place, et je paie par carte.", response: "«Всё. Ты не потерялся и закрыл заказ одной фразой».", effects: { french: 3, assimilation: 2 } }, { label: "Можно ещё раз помедленнее?", response: "«Можно. И это нормальная фраза, а не признание в провале».", effects: { french: 3, stability: 2 } }] }],
+    [{ prompt: "«В 11:30 будет очередь. Что ты сделаешь до неё?»", choices: [{ label: "Проверю мелочь, кассу и столы.", response: "«Правильно. Спокойная смена готовится до первого клиента».", effects: { admin: 2, stability: 2 } }, { label: "Запомню все цены.", response: "«Нужно, но проверь ещё и рабочее место. Память не вытрет стол».", effects: { french: 2, energy: -1 } }] }, { prompt: "«Гость возвращает кофе: говорит, что он холодный. Твой ответ?»", choices: [{ label: "Извинюсь и переделаю без спора.", response: "«Да. Потом разберёмся, где ошибка. Перед очередью мы решаем, а не доказываем».", effects: { french: 2, stability: 3 } }, { label: "Объясню, что машина работает нормально.", response: "«Не защищай машину от гостя. Защити доверие».", effects: { french: 2, stability: 1 } }] }],
+    [{ prompt: "«Твоя история не должна быть идеальной. С какого момента начнёшь?»", choices: [{ label: "С того, как я уехал не в ту сторону.", response: "«Отлично: смешно, конкретно и сразу узнаваемо».", effects: { french: 2, assimilation: 3 } }, { label: "С того, почему я решил переехать.", response: "«Честно. Только добавь одну сцену, чтобы это не звучало как резюме».", effects: { french: 2, stability: 2 } }] }, { prompt: "«А какой вопрос ты задашь человеку после своей истории?»", choices: [{ label: "«Какой момент ты теперь вспоминаешь со смехом?»", response: "«Вот. Теперь это не монолог, а начало общего вечера».", effects: { assimilation: 5, french: 2 } }, { label: "«Кто тебе помог в первый день?»", response: "«Сильный вопрос. Он сразу даёт людям важную роль».", effects: { assimilation: 4, stability: 2 } }] }],
+  ],
+  ines: [
+    [{ prompt: "«Скажи первую фразу вступления. Не извиняйся за акцент».", choices: [{ label: "Aujourd’hui, nous allons montrer trois choses…", response: "«Отлично: сразу есть plan. Дальше говори короче».", effects: { french: 4 } }, { label: "Je suis désolé pour mon français…", response: "«Стоп. Тебя ещё не слышали, а ты уже обесценил свою речь».", effects: { french: 3, stability: 2 } }] }, { prompt: "«В конце тебе задают вопрос, которого ты не понял. Что делаешь?»", choices: [{ label: "Переформулирую то, что услышал.", response: "«Да: si je comprends bien… И человек сам поправит неточность».", effects: { french: 4, stability: 2 } }, { label: "Передам ответ Инес.", response: "«Я помогу один раз. Но задача — чтобы твой голос остался твоим».", effects: { french: 2, stability: 2 } }] }],
+    [{ prompt: "«Ты нашёл десять статей. Как поймёшь, какие две нам нужны?»", choices: [{ label: "Сверю вопрос, автора и дату.", response: "«И прочитай conclusion. Не надо превращать поиск в коллекцию PDF».", effects: { admin: 3, french: 2 } }, { label: "Возьму самые цитируемые.", response: "«Цитируемость полезна, но не заменяет связь с нашим вопросом».", effects: { admin: 2 } }] }, { prompt: "«В группе двое не сделали свою часть. Ты молча доделаешь?»", choices: [{ label: "Сначала переделю задачи и зафиксирую срок.", response: "«Да. Французская вежливость не означает, что ты должен взять всё на себя».", effects: { stability: 3, french: 2 } }, { label: "Доделаю — так быстрее.", response: "«Сегодня быстрее, но в следующий раз все будут ждать того же».", effects: { energy: -3, stability: 1 } }] }],
+    [{ prompt: "«На пикнике не будет темы. Как войдёшь в разговор?»", choices: [{ label: "Спрошу, какое место в Париже они любят.", response: "«Прекрасно. У каждого есть ответ, и ты сразу узнаешь город через людей».", effects: { assimilation: 4, french: 2 } }, { label: "Подожду, пока меня о чём-то спросят.", response: "«Могут спросить, но дай им маленькую дверь».", effects: { assimilation: 2 } }] }, { prompt: "«Кто-то шутит быстро, и ты не понял. Притворишься?»", choices: [{ label: "Спрошу, почему это смешно.", response: "«Именно. Человек обычно с радостью объясняет свою шутку».", effects: { french: 3, assimilation: 3 } }, { label: "Улыбнусь и сменю тему.", response: "«Иногда можно. Но не делай из этого единственную стратегию».", effects: { stability: 2 } }] }],
+  ],
+  bernard: [
+    [{ prompt: "«Вы печатали одну копию на двух сторонах. Почему это плохо?»", choices: [{ label: "Страницы труднее сканировать и сверять.", response: "«Верно. Один лист — одна страница, без скрепок».", effects: { admin: 4 } }, { label: "Потому что так не принято.", response: "«Не просто не принято: сканер может пропустить оборот».", effects: { admin: 3 } }] }, { prompt: "«Что вы отдадите мне, а что заберёте?»", choices: [{ label: "Копии и переводы оставлю, оригиналы заберу.", response: "«Именно. Перед уходом проверьте паспорт и диплом».", effects: { admin: 4, stability: 2 } }, { label: "Оставлю всю папку.", response: "«Никогда. Папка — ваш архив, а не наш».", effects: { admin: 3 } }] }],
+    [{ prompt: "«В счёте одна буква в имени не такая, как в паспорте. Что будем делать?»", choices: [{ label: "Приложу объяснение и попрошу исправить счёт.", response: "«Лучший вариант. Для сегодня приложите письмо об исправлении».", effects: { admin: 4, french: 2 } }, { label: "Надеюсь, что не заметят.", response: "«Автоматическая сверка заметит. Лучше объяснить до вопроса».", effects: { admin: 2, stability: -1 } }] }, { prompt: "«Назовите три документа на адрес».", choices: [{ label: "Договор, страховка и свежий счёт.", response: "«Верно. Проверьте дату и одинаковый адрес на всех трёх».", effects: { admin: 5, stability: 2 } }, { label: "Договор, выписка и паспорт.", response: "«Паспорт подтверждает личность, но не ваше жильё в Париже».", effects: { admin: 3 } }] }],
+    [{ prompt: "«Вместо “Когда будет готово?” какой вопрос вы зададите?»", choices: [{ label: "Какой срок и что мне делать, если ответа нет?", response: "«Отлично. У вас появились дата и действие».", effects: { admin: 4, stability: 3 } }, { label: "Можно ли ускорить?", response: "«Иногда. Но сначала узнайте обычный срок и номер дела».", effects: { admin: 3 } }] }, { prompt: "«Вы сердитесь на систему. Как не дать этому сломать разговор?»", choices: [{ label: "Разделю факты, чувства и следующий шаг.", response: "«Если бы все приходили с такой схемой, у меня было бы меньше седых волос».", effects: { stability: 4, assimilation: 2 } }, { label: "Постараюсь не показывать злость.", response: "«Скрывать не обязательно. Важно не потерять точный вопрос».", effects: { stability: 3, french: 2 } }] }],
+  ],
+  yuki: [
+    [{ prompt: "«Видишь мужчину с газетой? Какая линия будет первой?»", choices: [{ label: "Наклон спины и газеты.", response: "«Да. Лицо может подождать — жест уже рассказал половину».", effects: { assimilation: 3 } }, { label: "Контур его профиля.", response: "«Можно, но ты потеряешь то, что он делает. Сначала движение».", effects: { assimilation: 2 } }] }, { prompt: "«Твой набросок не похож. Ты его выбросишь?»", choices: [{ label: "Нет, подпишу жест, который хотел поймать.", response: "«Вот. Рисунок — это память, а не паспортная проверка».", effects: { assimilation: 4, stability: 2 } }, { label: "Попробую перерисовать по памяти.", response: "«Сделай второй, но сохрани первый. Он правдивее».", effects: { assimilation: 3 } }] }],
+    [{ prompt: "«Ты идёшь без карты. По чему будешь запоминать путь?»", choices: [{ label: "По пекарней, мозаике и красной двери.", response: "«Хорошо. Ты строишь карту из жизни, а не из названий».", effects: { assimilation: 4 } }, { label: "По номерам улиц.", response: "«На Монмартре номер может увести вверх, а не вперёд. Добавь ориентиры».", effects: { assimilation: 2 } }] }, { prompt: "«Турист просит показать самый красивый вид. Ты отдашь ему своё место?»", choices: [{ label: "Покажу другую тихую улицу.", response: "«Мудро. Не всяким любимым местом нужно становиться точкой на карте».", effects: { stability: 3, assimilation: 3 } }, { label: "Покажу — город не только мой.", response: "«Тоже честно. Просто не забудь, почему тебе было там хорошо».", effects: { assimilation: 3 } }] }],
+    [{ prompt: "«Какой рисунок ты боишься показывать больше всего?»", choices: [{ label: "Где видно, что я ещё чужой.", response: "«Именно он нужен. На нём есть твоя точка зрения, которой нет у местных».", effects: { assimilation: 5, stability: 2 } }, { label: "Где линии неровные.", response: "«Неровная линия может быть живой. Мы не показываем экзаменатору».", effects: { stability: 3 } }] }, { prompt: "«На открытии спрашивают, о чём твоя работа. Что ты ответишь?»", choices: [{ label: "О том, как чужой город начинает запоминать тебя.", response: "«Отлично. Коротко, лично и без оправданий».", effects: { french: 3, assimilation: 4 } }, { label: "Я пока не знаю — можно я скажу это?", response: "«Можно. Скажи, что ты выясняешь. Незнание тоже может быть точным».", effects: { french: 2, stability: 3 } }] }],
+  ],
+  luc: [
+    [{ prompt: "«Мы стоим у каменной стены. Что тебе нужно знать до даты?»", choices: [{ label: "Зачем её построили и кого она защищала.", response: "«Именно. Функция превращает камень в историю».", effects: { french: 2, assimilation: 3 } }, { label: "Какого она века.", response: "«Это полезно, но дата без причины быстро исчезнет».", effects: { assimilation: 2 } }] }, { prompt: "«Выбери одну деталь, которую ты запишешь».", choices: [{ label: "Следы инструмента на камне.", response: "«Прекрасно. Теперь это не абстрактный XII век, а чья-то рука».", effects: { assimilation: 4 } }, { label: "Высоту и толщину стены.", response: "«Хорошая точность. А теперь добавь, что это делало с человеком рядом».", effects: { assimilation: 3 } }] }],
+    [{ prompt: "«Не смотри на табличку. Кто этот человек на портрете?»", choices: [{ label: "Человек, который хочет казаться сильным.", response: "«Почему? Назови позу, одежду, предмет в руке. Тогда гипотеза заработает».", effects: { french: 2, assimilation: 3 } }, { label: "Не знаю без таблички.", response: "«Ты не обязан знать. Ты можешь заметить и предположить».", effects: { stability: 2, assimilation: 2 } }] }, { prompt: "«Табличка говорит, что ты ошибся. Разочарован?»", choices: [{ label: "Нет, сравню свою версию с контекстом.", response: "«Вот зачем нужна ошибка: она показала, как именно работает образ».", effects: { french: 2, assimilation: 4 } }, { label: "Да, лучше было сразу прочитать.", response: "«Тогда ты запомнил бы факт, но не свой взгляд».", effects: { assimilation: 2 } }] }],
+    [{ prompt: "«Школьник спрашивает: почему это искусство? Твой ответ?»", choices: [{ label: "Спрошу, что он сам в этом видит.", response: "«Лучший ход. Экскурсия — не допрос, а разговор».", effects: { french: 2, assimilation: 4 } }, { label: "Объясню технику и эпоху.", response: "«Полезно, но после двух фраз верни ему вопрос».", effects: { french: 3, assimilation: 2 } }] }, { prompt: "«В группе кто-то даёт неожиданный ответ. Ты поправишь?»", choices: [{ label: "Попрошу показать, как он к этому пришёл.", response: "«Да. Иногда самая интересная экскурсия начинается там, где ломается наш план».", effects: { assimilation: 5, stability: 2 } }, { label: "Мягко дам правильный ответ.", response: "«Ты сохранишь порядок, но можешь потерять открытие».", effects: { french: 2, stability: 2 } }] }],
+  ],
+  amina: [
+    [{ prompt: "«Перед тем как класть вещь в коробку, что ты себя спросишь?»", choices: [{ label: "Я бы сам обрадовался такой вещи?", response: "«Да. Помощь не должна сбывать на других то, что нам самим не нужно».", effects: { assimilation: 4 } }, { label: "В какую коробку она поместится?", response: "«Это второй вопрос. Первый — нужна ли она кому-то».", effects: { admin: 2, assimilation: 2 } }] }, { prompt: "«На складе много хаоса. С чего начнёшь?»", choices: [{ label: "Со списка запросов на сегодня.", response: "«Именно. Склад существует для людей, а не для идеальных полок».", effects: { admin: 3, assimilation: 2 } }, { label: "Разложу всё по цветам и типам.", response: "«Красиво, но сначала закроем сегодняшние нужды».", effects: { admin: 2 } }] }],
+    [{ prompt: "«Новая семья спрашивает о всём сразу. Как не перегрузить их?»", choices: [{ label: "Дам три шага на сегодня и контакт на завтра.", response: "«Лучше всего. Человеку нужен путь, а не энциклопедия».", effects: { french: 2, assimilation: 4 } }, { label: "Отдам им полную памятку.", response: "«Отдай, но пометь три пункта, которые нужны прямо сейчас».", effects: { admin: 2, assimilation: 2 } }] }, { prompt: "«Они стесняются спрашивать второй раз. Что ты скажешь?»", choices: [{ label: "«Я тоже переспрашивал. Вот мой номер».", response: "«Да. Не делай вид, что тебе всё давалось легко — это отдаляет».", effects: { assimilation: 5, stability: 2 } }, { label: "«Все вопросы есть в памятке».", response: "«Памятка не ответит на чувство растерянности. Ты можешь».", effects: { assimilation: 2 } }] }],
+    [{ prompt: "«Ты хочешь обмен книгами. Как поймёшь, что он нужен району?»", choices: [{ label: "Спрошу соседей и библиотеку.", response: "«Правильно. Не начинай с афиши — начни с людей».", effects: { assimilation: 4, french: 2 } }, { label: "Сделаю красивую афишу и посмотрю.", response: "«Афиша нужна. Но красивое молчание не заменит разговор».", effects: { assimilation: 2 } }] }, { prompt: "«Ты не успеваешь всё сам. Что отдашь другим?»", choices: [{ label: "Сбор книг и встречу гостей — двум людям.", response: "«Отлично. А сам держи расписание и связь между команами».", effects: { admin: 3, stability: 3, assimilation: 2 } }, { label: "Ничего — так точно не потеряется.", response: "«Зато потеряешься ты. Доверие — тоже часть организации».", effects: { energy: -3, stability: 1 } }] }],
+  ],
+  thomas: [
+    [{ prompt: "«Назови один результат, а не своё качество».", choices: [{ label: "Сократил срок проекта на две недели.", response: "«Хорошо. Теперь скажи, что именно ты сделал для этого».", effects: { french: 2, stability: 3 } }, { label: "Я очень ответственный.", response: "«Это обещание. Мне нужен эпизод, где твоя ответственность изменила итог».", effects: { french: 2 } }] }, { prompt: "«Почему тебе нужна именно эта компания?»", choices: [{ label: "Назову их проект и свяжу его со своим опытом.", response: "«Вот это мотивация: ты изучил их и понял свою пользу».", effects: { french: 3, stability: 3 } }, { label: "Скажу, что мне нужен стабильный статус.", response: "«Это честно, но отвечает на твою нужду, а не на нужду команды».", effects: { admin: 2, stability: 2 } }] }],
+    [{ prompt: "«Строка “отвечал за проект”. Чего в ней не хватает?»", choices: [{ label: "Масштаба, действий и результата.", response: "«Верно. Сколько людей, что сделал лично ты, что изменилось».", effects: { french: 3, stability: 3 } }, { label: "Красивого глагола.", response: "«Глагол поможет, но не спасёт пустую строку».", effects: { french: 2 } }] }, { prompt: "«Твой иностранный опыт не понятен рекрутеру. Что ты сделаешь?»", choices: [{ label: "Переведу не название, а уровень ответственности.", response: "«Именно. Бюджет, команда, решения — они переводятся лучше титула».", effects: { french: 3, stability: 4 } }, { label: "Уберу этот опыт.", response: "«Тогда ты сам сделаешь свой путь меньше. Сначала попробуй объяснить».", effects: { stability: 1 } }] }],
+    [{ prompt: "«Через три года ты назвал должность. А какой будет твоя обычная среда?»", choices: [{ label: "Команда, где я могу спорить и брать ответственность.", response: "«Хорошо. Теперь это не титул, а тип работы и отношений».", effects: { stability: 4, assimilation: 2 } }, { label: "Главное — бессрочный контракт.", response: "«Он важен. Но контракт не опишет, как ты хочешь проводить каждый день».", effects: { admin: 2, stability: 2 } }] }, { prompt: "«Если первый план не сработает, ты сочтёшь себя провалившимся?»", choices: [{ label: "Нет, у плана будут резервные маршруты.", response: "«Вот зрелый ответ. Устойчивость — не идеальный маршрут, а способность перестроиться».", effects: { stability: 5, admin: 2 } }, { label: "Да. Мне нужен один точный план.", response: "«Точный план нужен, но его нельзя путать с гарантией».", effects: { stability: 2 } }] }],
+  ],
+};
+
 function getNpcDialogues(npcId: string) {
   return [dialogues[npcId], ...(moreDialogues[npcId] ?? [])];
+}
+
+function getDialogueMission(npcId: string, dialogueIndex: number) {
+  const missions = dialogueMissions[npcId];
+  return missions[dialogueIndex % missions.length];
+}
+
+function getDialogueRounds(npcId: string, dialogueIndex: number) {
+  const dialogue = getNpcDialogues(npcId)[dialogueIndex % getNpcDialogues(npcId).length];
+  return [{ prompt: dialogue.greeting, choices: dialogue.choices }, ...dialogueFollowUps[npcId][dialogueIndex % dialogueFollowUps[npcId].length]];
+}
+
+function getRelationshipTitle(value: number) {
+  if (value >= 80) return "близкий человек";
+  if (value >= 55) return "доверяет тебе";
+  if (value >= 30) return "хороший знакомый";
+  if (value >= 10) return "узнаёт тебя";
+  return "новое знакомство";
 }
 
 const cityEvents: CityEvent[] = [
@@ -605,46 +734,6 @@ const metroStopByLocation: Record<string, string> = {
   montmartre: "Anvers",
   notredame: "Saint-Michel",
 };
-
-const pixelMetroPaths = [
-  { id: "1", color: "#ffcd00", points: [[5, 53], [18, 51], [35, 52], [52, 54], [68, 57], [88, 61], [96, 62]] },
-  { id: "2", color: "#0064b0", points: [[7, 43], [18, 27], [37, 17], [55, 19], [73, 29], [91, 44]] },
-  { id: "3", color: "#9f9825", points: [[13, 34], [29, 31], [46, 33], [63, 38], [82, 39], [95, 34]] },
-  { id: "4", color: "#be418d", points: [[51, 5], [53, 20], [55, 38], [56, 55], [54, 70], [49, 91]] },
-  { id: "5", color: "#f28e42", points: [[69, 5], [67, 25], [66, 40], [68, 58], [72, 78], [77, 95]] },
-  { id: "6", color: "#77c695", points: [[7, 57], [17, 67], [31, 78], [48, 84], [67, 85], [85, 72], [92, 60]] },
-  { id: "7", color: "#f3a4ba", points: [[62, 4], [60, 23], [59, 42], [61, 58], [66, 76], [67, 96]] },
-  { id: "8", color: "#ceadd2", points: [[13, 73], [30, 68], [48, 61], [65, 50], [79, 35], [92, 24]] },
-  { id: "9", color: "#b6bd00", points: [[4, 46], [22, 43], [41, 40], [61, 38], [78, 39], [96, 46]] },
-  { id: "10", color: "#c9910d", points: [[18, 82], [33, 76], [48, 71], [61, 72], [74, 79], [88, 87]] },
-  { id: "11", color: "#704b1c", points: [[58, 55], [67, 44], [78, 34], [89, 24], [96, 18]] },
-  { id: "12", color: "#007852", points: [[36, 6], [39, 23], [42, 42], [44, 61], [42, 78], [38, 96]] },
-  { id: "13", color: "#6ec4e8", points: [[23, 5], [28, 24], [31, 43], [33, 62], [30, 82], [25, 96]] },
-  { id: "14", color: "#662483", points: [[47, 7], [48, 25], [50, 42], [53, 58], [57, 75], [62, 93]] },
-] as const;
-
-const pixelMetroStations = [
-  { name: "Charles de Gaulle–Étoile", short: "Étoile", x: 8, y: 48 },
-  { name: "Anvers", short: "Anvers", x: 40, y: 18 },
-  { name: "Barbès – Rochechouart", short: "Barbès", x: 52, y: 19 },
-  { name: "République", short: "République", x: 68, y: 38 },
-  { name: "Oberkampf", short: "Oberkampf", x: 76, y: 40 },
-  { name: "Franklin D. Roosevelt", short: "Franklin D.R.", x: 24, y: 50 },
-  { name: "Concorde", short: "Concorde", x: 36, y: 52 },
-  { name: "Palais Royal – Musée du Louvre", short: "Palais Royal", x: 48, y: 54 },
-  { name: "Châtelet", short: "Châtelet", x: 58, y: 56 },
-  { name: "Cité", short: "Cité", x: 57, y: 62 },
-  { name: "Saint-Michel", short: "Saint-Michel", x: 55, y: 69 },
-  { name: "Cluny – La Sorbonne", short: "Cluny", x: 53, y: 72 },
-  { name: "Odéon", short: "Odéon", x: 49, y: 73 },
-  { name: "Montparnasse – Bienvenüe", short: "Montparnasse", x: 42, y: 81 },
-  { name: "Bir-Hakeim", short: "Bir-Hakeim", x: 18, y: 66 },
-  { name: "Bastille", short: "Bastille", x: 70, y: 59 },
-  { name: "Nation", short: "Nation", x: 89, y: 62 },
-  { name: "Gare d’Austerlitz", short: "Austerlitz", x: 67, y: 76 },
-  { name: "Place d’Italie", short: "Italie", x: 70, y: 84 },
-  { name: "Gare de l’Est", short: "Gare de l’Est", x: 58, y: 27 },
-];
 
 const storyChapters: StoryChapter[] = [
   {
@@ -775,32 +864,87 @@ function LandmarkArt({ type }: { type: string }) {
   );
 }
 
+function normalizeMetroName(value: string) {
+  const key = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\u2019']/g, "-").replace(/[^a-zA-Z0-9]+/g, " ").trim().toLowerCase();
+  const aliases: Record<string, string> = { "saint michel": "st michel", "montparnasse bienvenue": "montparnasse" };
+  return aliases[key] ?? key;
+}
+
 function PixelMetroMap({ trip, currentLeg }: { trip: MetroTrip; currentLeg: MetroLeg }) {
-  const routeLineIds = new Set(trip.legs.map((leg) => leg.lineId));
-  const routeStations = new Set(trip.legs.flatMap((leg) => [leg.from, leg.to]));
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ pointerId: number; x: number; y: number; panX: number; panY: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [selectedStationKey, setSelectedStationKey] = useState(normalizeMetroName(currentLeg.from));
+  const routeLineIds = new Set(trip.legs.map((leg) => leg.lineId.toUpperCase()));
+  const routeStations = new Set(trip.legs.flatMap((leg) => [normalizeMetroName(leg.from), normalizeMetroName(leg.to)]));
+  const currentStationKey = normalizeMetroName(currentLeg.from);
+  const selectedStation = metroSchematic.stations.find((station) => station.key === selectedStationKey);
+  const mapWidth = metroSchematic.width;
+  const mapHeight = metroSchematic.height;
+
+  const setSafeZoom = (nextZoom: number) => setZoom(Math.max(1, Math.min(4, Math.round(nextZoom * 10) / 10)));
+  const resetMap = () => { setZoom(1); setPan({ x: 0, y: 0 }); setSelectedStationKey(currentStationKey); };
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || !viewportRef.current) return;
+    const rect = viewportRef.current.getBoundingClientRect();
+    const mapUnitsPerPixel = mapWidth / Math.max(1, rect.width);
+    setPan({ x: drag.panX + (event.clientX - drag.x) * mapUnitsPerPixel, y: drag.panY + (event.clientY - drag.y) * mapUnitsPerPixel });
+  };
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
   return (
-    <div className="pixel-metro-map" aria-label="Пиксельная схема метро Парижа">
-      <div className="metro-map-title"><b>MÉTRO PARIS</b><span>СХЕМА ЛИНИЙ · 8-BIT</span></div>
-      <div className="metro-map-seine"><i /><i /><i /></div>
-      {pixelMetroPaths.map((path) => (
-        <div className={`pixel-line line-${path.id} ${routeLineIds.has(path.id) ? "route-active" : ""}`} key={path.id}>
-          {path.points.slice(1).map((point, index) => {
-            const start = path.points[index];
-            const dx = point[0] - start[0];
-            const dy = point[1] - start[1];
-            const length = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-            return <i key={`${path.id}-${index}`} style={{ left: `${start[0]}%`, top: `${start[1]}%`, width: `${length}%`, background: path.color, transform: `rotate(${angle}deg)` }} />;
-          })}
-          <b style={{ left: `${path.points[0][0]}%`, top: `${path.points[0][1]}%`, background: path.color }}>{path.id}</b>
-        </div>
-      ))}
-      {pixelMetroStations.map((station) => {
-        const onRoute = routeStations.has(station.name);
-        const current = station.name === currentLeg.from;
-        return <div className={`pixel-station ${onRoute ? "on-route" : ""} ${current ? "current" : ""}`} style={{ left: `${station.x}%`, top: `${station.y}%` }} key={station.name}><i /><span>{station.short}</span></div>;
-      })}
-      <div className="metro-map-legend"><span><i className="map-current-dot" /> вы здесь</span><span><i className="map-route-dot" /> маршрут</span><b>{currentLeg.from} → {trip.destination.label}</b></div>
+    <div className={`official-metro-map ${zoom >= 1.6 ? "is-zoomed" : ""}`} aria-label="Интерактивная схема метро Парижа">
+      <div className="metro-map-toolbar">
+        <div><b>MÉTRO PARIS</b><span>Реальная схема · 311 станций</span></div>
+        <div className="metro-zoom-controls" aria-label="Масштаб карты"><button onClick={() => setSafeZoom(zoom - .35)} aria-label="Уменьшить">-</button><output>{Math.round(zoom * 100)}%</output><button onClick={() => setSafeZoom(zoom + .35)} aria-label="Увеличить">+</button><button className="metro-reset" onClick={resetMap}>Центр</button></div>
+      </div>
+      <div
+        ref={viewportRef}
+        className="metro-map-viewport"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onDoubleClick={() => setSafeZoom(zoom + .5)}
+        onWheel={(event) => { event.preventDefault(); setSafeZoom(zoom + (event.deltaY < 0 ? .25 : -.25)); }}
+      >
+        <svg viewBox={`0 0 ${mapWidth} ${mapHeight}`} role="img" aria-label="Линии и станции парижского метро">
+          <defs><pattern id="metro-paper-grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M 28 0 L 0 0 0 28" /></pattern></defs>
+          <rect width={mapWidth} height={mapHeight} className="metro-paper" />
+          <rect width={mapWidth} height={mapHeight} fill="url(#metro-paper-grid)" className="metro-grid" />
+          <g transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`} className="metro-map-canvas">
+            <g className="official-lines">
+              {metroSchematic.lines.map((line) => <g key={line.id} className={routeLineIds.has(line.id) ? "route-line-active" : ""}>{line.segments.map((segment, index) => <polyline key={`${line.id}-${index}`} points={segment.map((point) => point.join(",")).join(" ")} stroke={line.color} />)}</g>)}
+            </g>
+            <g className="official-stations">
+              {metroSchematic.stations.map((station) => {
+                const current = station.key === currentStationKey;
+                const onRoute = routeStations.has(station.key);
+                const interchange = station.lines.length > 1;
+                const showLabel = zoom >= 1.6 || current || onRoute || station.lines.length >= 4;
+                return <g key={station.key} className={`official-station ${interchange ? "interchange" : ""} ${onRoute ? "on-route" : ""} ${current ? "current" : ""} ${selectedStationKey === station.key ? "selected" : ""}`} transform={`translate(${station.x} ${station.y})`} onPointerDown={(event) => event.stopPropagation()} onClick={() => setSelectedStationKey(station.key)} role="button" tabIndex={0} aria-label={`${station.name}, линии ${station.lines.join(", ")}`}>
+                  {interchange && <circle className="station-ring" r={7} />}
+                  <circle className="station-dot" r={current ? 7 : onRoute ? 5.5 : 3.2} />
+                  {showLabel && <text x={8} y={-7}>{station.name}</text>}
+                </g>;
+              })}
+            </g>
+          </g>
+        </svg>
+        <div className="metro-map-help"><span>Зажмите и двигайте</span><span>Колесо или +/− для масштаба</span></div>
+        {selectedStation && <div className="metro-station-inspector"><small>СТАНЦИЯ</small><strong>{selectedStation.name}</strong><div>{selectedStation.lines.map((lineId) => { const line = metroSchematic.lines.find((item) => item.id === lineId); return <i key={lineId} style={{ background: line?.color }}>{lineId}</i>; })}</div></div>}
+      </div>
+      <div className="metro-route-summary"><div><i className="map-current-dot" /><span>Вы здесь</span><strong>{currentLeg.from}</strong></div><div><i className="map-route-dot" /><span>Цель</span><strong>{trip.destination.label}</strong></div><p>Линии маршрута подсвечены. Нажмите на станцию, чтобы увидеть пересадки.</p></div>
+      <div className="metro-data-credit">Данные: Île-de-France Mobilités Open Data · Licence Ouverte 2.0</div>
     </div>
   );
 }
@@ -987,7 +1131,10 @@ export default function Home() {
   const [dialogueResult, setDialogueResult] = useState("");
   const [dialogueStage, setDialogueStage] = useState<"intro" | "choice" | "result">("choice");
   const [activeDialogueIndex, setActiveDialogueIndex] = useState(0);
+  const [dialogueRoundIndex, setDialogueRoundIndex] = useState(0);
   const [npcDialogueProgress, setNpcDialogueProgress] = useState<Record<string, number>>({});
+  const [relationships, setRelationships] = useState<Record<string, number>>({});
+  const [npcAssignments, setNpcAssignments] = useState<Record<string, NpcAssignment>>({});
   const [showAchievements, setShowAchievements] = useState(false);
   const [showGameMenu, setShowGameMenu] = useState(false);
   const [statsExpanded, setStatsExpanded] = useState(false);
@@ -1011,15 +1158,20 @@ export default function Home() {
   const selectedRoute = routes.find((route) => route.id === routeId) ?? routes[0];
   const currentLocation = locations.find((location) => location.id === locationId) ?? locations[0];
   const currentNpc = npcs.find((npc) => npc.id === currentLocation.npc) ?? npcs[0];
-  const currentNpcDialogueCount = getNpcDialogues(currentNpc.id).length;
-  const currentNpcDialogueIndex = npcDialogueProgress[currentNpc.id] ?? 0;
-  const currentNpcHasDialogue = currentNpcDialogueIndex < currentNpcDialogueCount;
+  const currentNpcDialogueProgress = npcDialogueProgress[currentNpc.id] ?? 0;
+  const currentNpcDialogueIndex = currentNpcDialogueProgress % getNpcDialogues(currentNpc.id).length;
+  const currentNpcMission = getDialogueMission(currentNpc.id, currentNpcDialogueIndex);
+  const currentNpcRelationship = relationships[currentNpc.id] ?? 0;
   const activeDialogueDef = activeDialogue ? getNpcDialogues(activeDialogue.id)[activeDialogueIndex] : null;
+  const activeDialogueMission = activeDialogue ? getDialogueMission(activeDialogue.id, activeDialogueIndex) : null;
+  const activeDialogueRounds = activeDialogue ? getDialogueRounds(activeDialogue.id, activeDialogueIndex) : [];
+  const activeDialogueRound = activeDialogueRounds[dialogueRoundIndex] ?? null;
+  const activeDialogueRelationship = activeDialogue ? relationships[activeDialogue.id] ?? 0 : 0;
   const goal = yearGoals[Math.min(year - 1, yearGoals.length - 1)];
   const chapter = storyChapters[Math.min(year - 1, storyChapters.length - 1)];
   const goalsMet = stats.french >= goal.french && stats.admin >= goal.admin && stats.assimilation >= goal.assimilation && stats.stability >= goal.stability;
   const dailyTasks = dailyTaskSets[(day - 1) % dailyTaskSets.length];
-  const isDailyTaskDone = (task: DailyTask) => completedDailyTaskIds.includes(task.id) || (task.trigger === "talk" && (npcDialogueProgress[task.targetId] ?? 0) >= getNpcDialogues(task.targetId).length);
+  const isDailyTaskDone = (task: DailyTask) => completedDailyTaskIds.includes(task.id);
   const allDailyTasksDone = dailyTasks.every(isDailyTaskDone);
   const nextDailyTask = dailyTasks.find((task) => !isDailyTaskDone(task)) ?? null;
   const currentCityEvent = cityEvents[(day - 1) % cityEvents.length];
@@ -1066,9 +1218,9 @@ export default function Home() {
 
   useEffect(() => {
     if (phase !== "game" || !profile.name) return;
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
-  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress]);
+  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1088,9 +1240,10 @@ export default function Home() {
   useEffect(() => {
     if (!activeTravel) return;
     const progressTimers = [
-      window.setTimeout(() => setTravelProgress(34), 420),
-      window.setTimeout(() => setTravelProgress(67), 980),
-      window.setTimeout(() => setTravelProgress(88), 1550),
+      window.setTimeout(() => setTravelProgress(24), 900),
+      window.setTimeout(() => setTravelProgress(48), 2400),
+      window.setTimeout(() => setTravelProgress(72), 3900),
+      window.setTimeout(() => setTravelProgress(91), 5400),
     ];
     const arrivalTimer = window.setTimeout(() => {
       const origin = locations.find((location) => location.id === activeTravel.originId) ?? locations[0];
@@ -1112,7 +1265,7 @@ export default function Home() {
       setActiveTravel(null);
       setViewMode("scene");
       setToast(`${transport} · прибытие примерно в ${formatTime(time + activeTravel.minutes / 60)}`);
-    }, 2200);
+    }, 6500);
     return () => {
       progressTimers.forEach((timer) => window.clearTimeout(timer));
       window.clearTimeout(arrivalTimer);
@@ -1126,8 +1279,8 @@ export default function Home() {
     setYear(1); setDay(1); setTime(7); setLocationId("home"); setAwake(false);
     setActionCount(0); setSeenEvents([]); setMetNpcs([]);
     setDailyProgress(emptyDayProgress); setDailyRewardClaimed(false); setVisitedLocations(["home"]); setCompletedCityEvents([]);
-    setCompletedDailyTaskIds([]); setChapterProgressPoints(0); setNpcDialogueProgress({});
-    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setActiveDialogueIndex(0); setShowAchievements(false); setShowGameMenu(false);
+    setCompletedDailyTaskIds([]); setChapterProgressPoints(0); setNpcDialogueProgress({}); setRelationships({}); setNpcAssignments({});
+    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setActiveDialogueIndex(0); setDialogueRoundIndex(0); setShowAchievements(false); setShowGameMenu(false);
     setStatsExpanded(false); setStoryExpanded(false); setSideTab("actions");
     setMetroTrip(null); setActiveTravel(null); setTravelProgress(0); setActiveAction(null); setActionProgress(0); setShowEventReveal(false); setDayTransitionPhase(null);
     setViewMode("scene"); setPendingTravel(null); setTutorialStep(0);
@@ -1143,7 +1296,7 @@ export default function Home() {
     setDailyProgress(savedGame.dailyProgress ?? emptyDayProgress); setDailyRewardClaimed(savedGame.dailyRewardClaimed ?? false);
     setVisitedLocations(savedGame.visitedLocations ?? [savedGame.locationId]); setCompletedCityEvents(savedGame.completedCityEvents ?? []);
     setCompletedDailyTaskIds(savedGame.completedDailyTaskIds ?? []); setChapterProgressPoints(savedGame.chapterProgressPoints ?? 0);
-    setNpcDialogueProgress(savedGame.npcDialogueProgress ?? {});
+    setNpcDialogueProgress(savedGame.npcDialogueProgress ?? {}); setRelationships(savedGame.relationships ?? {}); setNpcAssignments(savedGame.npcAssignments ?? {});
     setAwake(true); setViewMode("scene"); setTutorialStep(-1); setSideTab("actions"); setActiveAction(null); setShowEventReveal(false); setPhase("game");
   };
 
@@ -1153,7 +1306,7 @@ export default function Home() {
   };
 
   const exitToTitle = () => {
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
     setSavedGame(save);
     setPhase("intro");
@@ -1170,15 +1323,15 @@ export default function Home() {
     if (dayTransitionPhase) return;
     setDayTransitionText(message);
     setDayTransitionPhase("sunset");
-    window.setTimeout(() => setDayTransitionPhase("night"), 650);
+    window.setTimeout(() => setDayTransitionPhase("night"), 1250);
     window.setTimeout(() => {
       setDay((value) => value + 1); setTime(6); setAwake(false); setLocationId("home");
       setDailyProgress(emptyDayProgress); setDailyRewardClaimed(false); setCompletedDailyTaskIds([]);
       setViewMode("scene"); setStats((current) => applyEffects(current, { energy: 12 }));
       setDayTransitionPhase("dawn");
       addJournal(`День ${day} завершён. Париж затихает за окном.`);
-    }, 1300);
-    window.setTimeout(() => setDayTransitionPhase(null), 2500);
+    }, 2600);
+    window.setTimeout(() => setDayTransitionPhase(null), 4700);
   };
 
   const finishDay = () => startDayTransition();
@@ -1205,9 +1358,10 @@ export default function Home() {
     const actionStart = time;
     setActionProgress(7);
     setActiveAction({ action, locationId: actionLocation.id, startTime: actionStart });
-    window.setTimeout(() => setActionProgress(38), 280);
-    window.setTimeout(() => setActionProgress(72), 720);
-    window.setTimeout(() => setActionProgress(92), 1080);
+    window.setTimeout(() => setActionProgress(27), 850);
+    window.setTimeout(() => setActionProgress(52), 2100);
+    window.setTimeout(() => setActionProgress(76), 3450);
+    window.setTimeout(() => setActionProgress(93), 4700);
     window.setTimeout(() => {
       const nextTime = actionStart + action.hours;
       const nextCount = actionCount + 1;
@@ -1239,7 +1393,7 @@ export default function Home() {
       } else {
         setTime(nextTime);
       }
-    }, 1350);
+    }, 5450);
   };
 
   const travelTo = (id: string) => {
@@ -1310,17 +1464,18 @@ export default function Home() {
   };
 
   const talkToNpc = () => {
-    if (!currentNpcHasDialogue) return;
     setActiveDialogue(currentNpc);
     setActiveDialogueIndex(currentNpcDialogueIndex);
+    setDialogueRoundIndex(0);
     setDialogueResult("");
     setDialogueStage(metNpcs.includes(currentNpc.id) ? "choice" : "intro");
   };
 
   const chooseDialogue = (choice: DialogueChoice) => {
-    if (!activeDialogue || !activeDialogueDef) return;
+    if (!activeDialogue || !activeDialogueDef || !activeDialogueMission || !activeDialogueRound) return;
     const firstMeeting = !metNpcs.includes(activeDialogue.id);
-    const baseEffects: Partial<Stats> = { energy: -3, french: firstMeeting ? 2 : 1, assimilation: firstMeeting ? 3 : 1 };
+    const finalRound = dialogueRoundIndex >= activeDialogueRounds.length - 1;
+    const baseEffects: Partial<Stats> = { energy: -1, french: firstMeeting ? 2 : 0, assimilation: firstMeeting ? 2 : 0 };
     const combinedEffects: Partial<Stats> = {
       ...baseEffects,
       ...choice.effects,
@@ -1330,28 +1485,42 @@ export default function Home() {
     };
     if (firstMeeting) setMetNpcs((items) => [...items, activeDialogue.id]);
     setStats((current) => applyEffects(current, combinedEffects));
-    setTime((value) => Math.min(23.95, value + 5 / 60));
-    setCompletedDailyTaskIds((items) => {
-      const matches = dailyTasks.filter((task) => task.trigger === "talk" && task.targetId === activeDialogue.id && task.locationId === currentLocation.id).map((task) => task.id);
-      return [...new Set([...items, ...matches])];
-    });
-    setChapterProgressPoints((value) => Math.min(100, value + 2));
-    setDailyProgress((progress) => ({
-      ...progress,
-      talks: progress.talks + 1,
-      french: progress.french + ((combinedEffects.french ?? 0) > 0 ? 1 : 0),
-      admin: progress.admin + ((combinedEffects.admin ?? 0) > 0 ? 1 : 0),
-      culture: progress.culture + ((combinedEffects.assimilation ?? 0) > 0 ? 1 : 0),
-      earned: progress.earned + Math.max(0, combinedEffects.money ?? 0),
-    }));
+    setRelationships((values) => ({ ...values, [activeDialogue.id]: Math.min(100, (values[activeDialogue.id] ?? 0) + 4 + ((choice.effects.assimilation ?? 0) > 2 ? 1 : 0)) }));
+    setTime((value) => Math.min(23.95, value + Math.ceil(activeDialogueMission.durationMinutes / activeDialogueRounds.length) / 60));
     setDialogueResult(choice.response);
     setDialogueStage("result");
-    setNpcDialogueProgress((progress) => ({ ...progress, [activeDialogue.id]: Math.max(progress[activeDialogue.id] ?? 0, activeDialogueIndex + 1) }));
-    addJournal(`${activeDialogue.name}: ${choice.response}`);
-    setToast(firstMeeting ? `Новое знакомство: ${activeDialogue.name}` : `Разговор повлиял на твою историю`);
+    if (finalRound) {
+      setCompletedDailyTaskIds((items) => {
+        const matches = dailyTasks.filter((task) => task.trigger === "talk" && task.targetId === activeDialogue.id && task.locationId === currentLocation.id).map((task) => task.id);
+        return [...new Set([...items, ...matches])];
+      });
+      setChapterProgressPoints((value) => Math.min(100, value + 5));
+      setDailyProgress((progress) => ({
+        ...progress,
+        talks: progress.talks + 1,
+        french: progress.french + ((combinedEffects.french ?? 0) > 0 ? 1 : 0),
+        admin: progress.admin + ((combinedEffects.admin ?? 0) > 0 ? 1 : 0),
+        culture: progress.culture + ((combinedEffects.assimilation ?? 0) > 0 ? 1 : 0),
+        earned: progress.earned + Math.max(0, combinedEffects.money ?? 0),
+      }));
+      setNpcDialogueProgress((progress) => ({ ...progress, [activeDialogue.id]: (progress[activeDialogue.id] ?? 0) + 1 }));
+      setNpcAssignments((assignments) => ({ ...assignments, [activeDialogue.id]: { missionId: activeDialogueMission.id, title: activeDialogueMission.title, task: activeDialogueMission.task, knowledge: activeDialogueMission.knowledge } }));
+      addJournal(`${activeDialogue.name} · ${activeDialogueMission.title}: ${activeDialogueMission.task}`);
+      setToast(firstMeeting ? `Новое знакомство: ${activeDialogue.name}` : `Новое личное поручение от ${activeDialogue.name}`);
+    }
   };
 
-  const closeDialogue = () => { setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); };
+  const continueDialogue = () => {
+    if (dialogueRoundIndex < activeDialogueRounds.length - 1) {
+      setDialogueRoundIndex((index) => index + 1);
+      setDialogueResult("");
+      setDialogueStage("choice");
+      return;
+    }
+    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setDialogueRoundIndex(0);
+  };
+
+  const closeDialogue = () => { setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setDialogueRoundIndex(0); };
 
   const claimDailyReward = () => {
     if (!allDailyTasksDone || dailyRewardClaimed) return;
@@ -1648,7 +1817,13 @@ export default function Home() {
           <p className="location-one-line">{currentLocation.description}</p>
           <div className="side-tabs" role="tablist" aria-label="Действия в локации"><button className={sideTab === "actions" ? "active" : ""} onClick={() => setSideTab("actions")}>Дела</button><button className={sideTab === "people" ? "active" : ""} onClick={() => setSideTab("people")}>Люди</button><button className={sideTab === "event" ? "active" : ""} onClick={() => setSideTab("event")}>Ивент <i>{cityEventDone ? "✓" : "1"}</i></button></div>
           {sideTab === "actions" && <div className="side-tab-content"><div className="actions-title"><span>ДОСТУПНЫЕ ДЕЛА</span><b>{awake ? `≈ ${Math.max(0, Math.floor(24 - time))} ч. осталось` : "сначала проснись"}</b></div><div className="action-list">{currentLocation.actions.map((action) => <button className={nextDailyTask?.trigger === "action" && nextDailyTask.targetId === action.id && nextDailyTask.locationId === currentLocation.id ? "quest-action" : ""} key={action.id} disabled={!awake} onClick={() => performAction(action)}><span className="action-icon">{action.icon}</span><span><strong>{action.label}</strong><small>{action.detail} · {action.hours} ч.</small></span><b>›</b></button>)}</div>{awake && <button className="end-day" onClick={finishDay}>Завершить день · вернуться домой</button>}</div>}
-          {sideTab === "people" && <div className="side-tab-content people-tab"><div className="npc-card"><PixelPortrait npc={currentNpc} small /><div><span>{currentNpc.role}</span><strong>{currentNpc.name}</strong><p>{!currentNpcHasDialogue ? "Вы уже обсудили всё важное. История этого знакомства завершена." : metNpcs.includes(currentNpc.id) ? `«${currentNpc.line}»` : "Вы ещё не знакомы. Начните с представления."}</p></div></div>{currentNpcHasDialogue && <button className="talk-button" disabled={!awake} onClick={talkToNpc}>Начать диалог · 5 мин. {metNpcs.includes(currentNpc.id) ? `· разговор ${currentNpcDialogueIndex + 1}/${currentNpcDialogueCount}` : "· представиться"}</button>}<div className="people-progress"><span>{currentNpcHasDialogue ? "Разговоры с персонажем" : "Все разговоры завершены"}</span><b>{currentNpcDialogueIndex}/{currentNpcDialogueCount}</b></div></div>}
+          {sideTab === "people" && <div className="side-tab-content people-tab">
+            <div className="npc-card"><PixelPortrait npc={currentNpc} small /><div><span>{currentNpc.role}</span><strong>{currentNpc.name}</strong><p>{metNpcs.includes(currentNpc.id) ? `«${currentNpc.line}»` : "Вы ещё не знакомы. Первый разговор начнётся с представления."}</p></div></div>
+            <div className="relationship-card"><div><span>ОТНОШЕНИЯ</span><b>{getRelationshipTitle(currentNpcRelationship)}</b><strong>{currentNpcRelationship}%</strong></div><div className="relationship-track"><i style={{ width: `${currentNpcRelationship}%` }} /></div></div>
+            <div className="conversation-preview"><span>{currentNpcMission.kind}</span><strong>{currentNpcMission.title}</strong><p>{currentNpcMission.goal}</p><small>Длительный разгов · около {currentNpcMission.durationMinutes} мин.</small></div>
+            <button className="talk-button" disabled={!awake} onClick={talkToNpc}>{metNpcs.includes(currentNpc.id) ? "Обсудить: " : "Представиться и начать: "}{currentNpcMission.title} →</button>
+            {npcAssignments[currentNpc.id] && <div className="npc-assignment"><span>ЛИЧНОЕ ПОРУЧЕНИЕ</span><strong>{npcAssignments[currentNpc.id].title}</strong><p>{npcAssignments[currentNpc.id].task}</p></div>}
+          </div>}
           {sideTab === "event" && <div className="side-tab-content"><div className={`city-event-card ${cityEventDone ? "completed" : ""}`}><div><span>{currentCityEvent.kicker}</span><b>{currentCityEvent.hours} ч.</b></div><h3>{currentCityEvent.title}</h3><p>{currentCityEvent.body}</p><small>⌖ {currentCityEventLocation.label} · {currentCityEventLocation.district}</small><button disabled={!awake || cityEventDone} onClick={participateCityEvent}>{cityEventDone ? "✓ Событие завершено" : locationId === currentCityEvent.locationId ? "Участвовать сейчас →" : "Показать место на карте →"}</button></div></div>}
         </aside>
       </div>
@@ -1688,13 +1863,14 @@ export default function Home() {
       {activeTravel && travelOrigin && travelDestination && (
         <div className={`travel-loading-screen travel-${activeTravel.mode}`}>
           <div className="travel-loading-sky"><i /><i /></div>
+          <div className="travel-cityscape" aria-hidden="true"><i className="travel-building one" /><i className="travel-building two" /><i className="travel-building three" /><span className="travel-tree one" /><span className="travel-tree two" /><span className="travel-lamp one" /><span className="travel-lamp two" /></div>
           <div className="travel-motion-art" aria-hidden="true">
-            {activeTravel.mode === "metro" ? <div className="loading-metro"><span className="train-window" /><span className="train-window" /><span className="train-door" /><b>M</b></div> : activeTravel.mode === "bike" ? <div className="loading-bike"><i className="wheel one" /><i className="wheel two" /><span className="bike-frame" /><span className="rider" /></div> : <div className="loading-walker"><i className="walk-head" /><i className="walk-body" /><i className="walk-leg one" /><i className="walk-leg two" /></div>}
+            {activeTravel.mode === "metro" ? <div className="loading-metro"><span className="train-window" /><span className="train-window" /><span className="train-door" /><b>M</b></div> : activeTravel.mode === "bike" ? <div className="loading-bike"><i className="wheel one" /><i className="wheel two" /><span className="bike-frame"><i /></span><span className="bike-rider"><i className="bike-head" /><i className="bike-body" /><i className="bike-arm front" /><i className="bike-arm back" /><i className="bike-leg front" /><i className="bike-leg back" /></span><span className="bike-basket" /><span className="bike-shadow" /></div> : <div className="loading-walker"><i className="walker-shadow" /><i className="walk-head" /><i className="walk-hair" /><i className="walk-body" /><i className="walk-arm one" /><i className="walk-arm two" /><i className="walk-leg one" /><i className="walk-leg two" /><i className="walk-backpack" /></div>}
           </div>
           <section className="travel-loading-card">
             <p>{activeTravel.mode === "metro" ? "EN ROUTE · MÉTRO" : activeTravel.mode === "bike" ? "EN ROUTE · VÉLIB’" : "EN ROUTE · À PIED"}</p>
             <h2>{travelOrigin.label} <span>→</span> {travelDestination.label}</h2>
-            <strong>{travelProgress < 34 ? "Отправляемся…" : travelProgress < 67 ? activeTravel.mode === "metro" ? "Следим за станциями…" : "Париж движется вокруг…" : travelProgress < 88 ? "Уже почти на месте…" : "Прибываем…"}</strong>
+            <strong>{travelProgress < 25 ? activeTravel.mode === "walk" ? "Выходим на улицу…" : activeTravel.mode === "bike" ? "Проверяем Vélib’ и строим маршрут…" : "Спускаемся на платформу…" : travelProgress < 50 ? activeTravel.mode === "metro" ? "Поезд набирает ход в тоннеле…" : activeTravel.mode === "bike" ? "Едем по велодорожке вдоль квартала…" : "Витрины и балконы меняются вокруг…" : travelProgress < 75 ? activeTravel.mode === "metro" ? "Следим за станциями и пересадками…" : activeTravel.mode === "bike" ? "Проезжаем перекрёсток и набираем темп…" : "Сворачиваем на более тихую улицу…" : travelProgress < 92 ? "Уже виден нужный квартал…" : "Прибываем и ориентируемся на месте…"}</strong>
             {activeTravel.mode === "metro" && <div className="loading-metro-lines">{activeTravel.legs.map((leg) => <span key={`${leg.lineId}-${leg.from}`}><i style={{ background: metroLines[leg.lineId].color, color: metroLines[leg.lineId].text }}>{leg.lineId}</i>{leg.to}</span>)}</div>}
             <div className="travel-loading-track"><span style={{ width: `${travelProgress}%` }} /></div>
             <small>≈ {activeTravel.minutes} мин. игрового времени</small>
@@ -1728,16 +1904,17 @@ export default function Home() {
         </div>
       )}
 
-      {activeDialogue && activeDialogueDef && (
+      {activeDialogue && activeDialogueDef && activeDialogueMission && activeDialogueRound && (
         <div className="modal-backdrop dialogue-backdrop">
           <section className="dialogue-modal">
             <button className="modal-close" onClick={closeDialogue}>×</button>
-            <div className="dialogue-speaker"><PixelPortrait npc={activeDialogue} /><span>{activeDialogue.role}</span><h2>{activeDialogue.name}</h2><small>{currentLocation.label}</small></div>
+            <div className="dialogue-speaker"><PixelPortrait npc={activeDialogue} /><span>{activeDialogue.role}</span><h2>{activeDialogue.name}</h2><small>{currentLocation.label}</small><div className="speaker-relationship"><span>{getRelationshipTitle(activeDialogueRelationship)}</span><i><b style={{ width: `${activeDialogueRelationship}%` }} /></i><strong>{activeDialogueRelationship}%</strong></div></div>
             <div className="dialogue-content">
-              <p className="eyebrow ink">{dialogueStage === "intro" ? "НОВОЕ ЗНАКОМСТВО" : "ДИАЛОГ · ОКОЛО 5 МИНУТ"}</p>
+              <p className="eyebrow ink">{dialogueStage === "intro" ? "НОВОЕ ЗНАКОМСТВО" : `${activeDialogueMission.kind} · ОКОЛО ${activeDialogueMission.durationMinutes} МИНУТ`}</p>
+              <div className="conversation-mission"><span>{activeDialogueMission.kind}</span><strong>{activeDialogueMission.title}</strong><p><b>Цель:</b> {activeDialogueMission.goal}</p></div>
               {dialogueStage === "intro" && <><div className="character-introduction"><span>КТО ЭТО?</span><p>{activeDialogueDef.intro}</p></div><button className="pixel-button primary" onClick={() => setDialogueStage("choice")}>Поздороваться и представиться →</button></>}
-              {dialogueStage === "choice" && <><div className="dialogue-episode">РАЗГОВОР {activeDialogueIndex + 1} ИЗ {getNpcDialogues(activeDialogue.id).length}</div><blockquote>«{activeDialogueDef.greeting}»</blockquote><div className="dialogue-choices">{activeDialogueDef.choices.map((choice) => <button key={choice.label} onClick={() => chooseDialogue(choice)}><span>Ответить:</span><strong>«{choice.label}»</strong><b>→</b></button>)}</div></>}
-              {dialogueStage === "result" && <><blockquote>«{dialogueResult}»</blockquote><div className="dialogue-time-note">Прошло около 5 минут · ответ записан в журнал</div><button className="pixel-button primary" onClick={closeDialogue}>Продолжить день →</button></>}
+              {dialogueStage === "choice" && <><div className="conversation-flow">{activeDialogueRounds.map((_, index) => <i key={index} className={index <= dialogueRoundIndex ? "active" : ""} />)}<span>разговор развивается</span></div><blockquote>«{activeDialogueRound.prompt}»</blockquote><div className="dialogue-choices">{activeDialogueRound.choices.map((choice) => <button key={choice.label} onClick={() => chooseDialogue(choice)}><span>Ответить:</span><strong>«{choice.label}»</strong><b>→</b></button>)}</div></>}
+              {dialogueStage === "result" && <><blockquote>«{dialogueResult}»</blockquote>{dialogueRoundIndex >= activeDialogueRounds.length - 1 ? <div className="dialogue-assignment-reveal"><span>ЗАПИСАНО В ЖУРНАЛ</span><strong>{activeDialogueMission.task}</strong><small><b>Вы разузнали:</b> {activeDialogueMission.knowledge}</small></div> : <div className="dialogue-time-note">Разговор продолжается · время идёт постепенно</div>}<button className="pixel-button primary" onClick={continueDialogue}>{dialogueRoundIndex >= activeDialogueRounds.length - 1 ? "Записать поручение и продолжить день →" : "Продолжить разговор →"}</button></>}
             </div>
           </section>
         </div>

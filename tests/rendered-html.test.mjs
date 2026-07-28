@@ -30,11 +30,12 @@ test("server-renders a translation-safe hydration shell", async () => {
 });
 
 test("keeps the requested gameplay systems in the product source", async () => {
-  const [page, layout, css, packageJson] = await Promise.all([
+  const [page, layout, css, packageJson, metroMap] = await Promise.all([
     readFile(new URL("app/page.tsx", projectRoot), "utf8"),
     readFile(new URL("app/layout.tsx", projectRoot), "utf8"),
     readFile(new URL("app/globals.css", projectRoot), "utf8"),
     readFile(new URL("package.json", projectRoot), "utf8"),
+    readFile(new URL("app/game/paris-metro-schematic.json", projectRoot), "utf8"),
   ]);
 
   assert.match(page, /Бакалавриат/);
@@ -66,7 +67,13 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(page, /PixelMetroMap/);
   assert.match(page, /dayTransitionPhase/);
   assert.match(page, /getActivityKind/);
-  assert.match(page, /Начать диалог · 5 мин/);
+  assert.match(page, /dialogueMissions/);
+  assert.match(page, /dialogueFollowUps/);
+  assert.match(page, /relationships/);
+  assert.match(page, /npcAssignments/);
+  assert.match(page, /Продолжить разговор/);
+  assert.match(page, /metroSchematic/);
+  assert.doesNotMatch(page, /РАЗГОВОР \{activeDialogueIndex \+ 1\} ИЗ/);
   assert.doesNotMatch(page, /type="range"/);
   assert.doesNotMatch(page, /Разобрать письма|Приготовить ужин/);
   assert.match(css, /pixel-portrait/);
@@ -88,6 +95,17 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(css, /pixel-metro-map/);
   assert.match(css, /activity-stage/);
   assert.match(css, /day-cycle-transition/);
+  assert.match(css, /official-metro-map/);
+  assert.match(css, /metro-map-viewport/);
+  assert.match(css, /relationship-card/);
+  assert.match(css, /dialogue-assignment-reveal/);
+  assert.match(css, /travel-cityscape/);
+  assert.match(css, /bike-rider/);
+  assert.match(css, /walk-backpack/);
+  const parsedMap = JSON.parse(metroMap);
+  assert.equal(parsedMap.lines.length, 16);
+  assert.ok(parsedMap.stations.length >= 300);
+  assert.equal(parsedMap.source, "Ile-de-France Mobilites Open Data");
   assert.match(layout, /lang="ru"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 });
