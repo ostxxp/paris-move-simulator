@@ -129,6 +129,8 @@ type ActiveAction = {
   startTime: number;
 };
 
+type ActivityKind = "home" | "cafe" | "study" | "admin" | "culture" | "walk" | "community";
+
 type AchievementDef = {
   id: string;
   icon: string;
@@ -190,6 +192,7 @@ type SavedGame = {
   completedCityEvents?: string[];
   completedDailyTaskIds?: string[];
   chapterProgressPoints?: number;
+  npcDialogueProgress?: Record<string, number>;
 };
 
 const STORAGE_KEY = "paris-nouvelle-vie-save-v1";
@@ -476,6 +479,93 @@ const dialogues: Record<string, DialogueDef> = {
   },
 };
 
+const moreDialogues: Record<string, DialogueDef[]> = {
+  claire: [
+    { intro: "Клэр снова встречает тебя на лестнице.", greeting: "Ну как первая ночь? В мансардах трубы иногда стучат так, будто кто-то живёт в стене.", choices: [
+      { label: "Честно? Я почти не спал.", response: "Тогда покажу вентиль отопления и дам номер gardien. В Париже половина спокойствия — знать, кому звонить.", effects: { french: 2, stability: 6 } },
+      { label: "Зато вид из окна всё компенсирует.", response: "Вот это правильный настрой. Приходи вечером — покажу крыши, куда не водят туристов.", effects: { assimilation: 7, energy: 2 } },
+    ] },
+    { intro: "Клэр уже обращается к тебе как к соседу.", greeting: "В воскресенье у нас собрание жильцов. Хочешь пойти со мной и познакомиться со всеми?", choices: [
+      { label: "Да, но помоги понять повестку.", response: "Конечно. Разберём слова про charges и travaux, а на встрече я тебя представлю.", effects: { french: 5, admin: 4, assimilation: 5 } },
+      { label: "Лучше сначала помогу с общей лестницей.", response: "Поступок скажет больше речи. После этого тебя точно запомнят.", effects: { energy: -4, assimilation: 8, stability: 4 } },
+    ] },
+  ],
+  malik: [
+    { intro: "Малик уже помнит твой обычный заказ.", greeting: "У нас освободилась субботняя смена. Справишься с кассой полностью на французском?", choices: [
+      { label: "Попробую, но сначала потренируем меню.", response: "Договорились. Самые опасные слова — noisette и allongé. Через час перестанешь путаться.", effects: { french: 7, stability: 5, energy: -3 } },
+      { label: "Давай сразу в бой.", response: "Смело! Первые два заказа были неловкими, зато третий ты уже принял без подсказки.", effects: { money: 35, french: 5, assimilation: 6, energy: -7 } },
+    ] },
+    { intro: "Теперь Малик разговаривает с тобой между заказами.", greeting: "Постоянные гости хотят устроить вечер историй о переезде. Расскажешь свою?", choices: [
+      { label: "Расскажу про первый день и потерянное метро.", response: "Все смеются не над тобой, а вместе с тобой. Оказывается, почти каждый однажды уезжал не в ту сторону.", effects: { french: 5, assimilation: 9 } },
+      { label: "Лучше помогу вести вечер.", response: "Ты задаёшь вопросы другим и неожиданно становишься связующим человеком всей компании.", effects: { assimilation: 8, stability: 6 } },
+    ] },
+  ],
+  ines: [
+    { intro: "Инес оставляет тебе место рядом на лекции.", greeting: "После пары идём готовить exposé. Какую часть возьмёшь?", choices: [
+      { label: "Сделаю вступление и вывод.", response: "Отлично: короткие части, зато именно их все запоминают. Проверим произношение вместе.", effects: { french: 7, stability: 4 } },
+      { label: "Соберу статистику и источники.", response: "Тогда ты отвечаешь за точность. Я покажу университетские базы, куда редко заглядывают новички.", effects: { admin: 5, stability: 5 } },
+    ] },
+    { intro: "Инес предлагает поговорить уже не только об учёбе.", greeting: "Мы празднуем окончание модуля у Сены. Ты с нами или снова в библиотеку?", choices: [
+      { label: "Сегодня точно с вами.", response: "Через час ты уже споришь о музыке и впервые не переводишь каждую фразу в голове.", effects: { energy: 5, french: 5, assimilation: 9 } },
+      { label: "Зайду ненадолго после библиотеки.", response: "Баланс принят. Ты закрываешь конспект вовремя и всё равно успеваешь к общему фото.", effects: { french: 4, assimilation: 5, stability: 5 } },
+    ] },
+  ],
+  bernard: [
+    { intro: "Бернар узнаёт тебя у окна приёма.", greeting: "Сегодня проверим justificatif de domicile. Какие три документа вы принесли?", choices: [
+      { label: "Договор, страховку жилья и счёт за электричество.", response: "Именно. Копии читаемые, адрес совпадает — этот раздел досье закрыт.", effects: { admin: 10, stability: 6 } },
+      { label: "Договор и банковскую выписку. Этого хватит?", response: "Не совсем. Выписка полезна, но нужен свежий счёт или attestation d’hébergement.", effects: { admin: 6, french: 3 } },
+    ] },
+    { intro: "Бернар говорит уже менее официально.", greeting: "Ваше досье стало аккуратным. Осталось решить: подавать сейчас или дождаться ещё одной справки?", choices: [
+      { label: "Подать сейчас и получить récépissé.", response: "Разумно. Я отмечу полный комплект и выдам подтверждение приёма.", effects: { admin: 9, stability: 8 } },
+      { label: "Подождать справку и усилить пакет.", response: "Тоже допустимо. Запишите крайний срок, чтобы осторожность не превратилась в опоздание.", effects: { admin: 7, stability: 5 } },
+    ] },
+  ],
+  yuki: [
+    { intro: "Юки машет тебе с привычного места на ступенях.", greeting: "Сегодня рисуем один и тот же вид десятью линиями. Что оставишь на листе?", choices: [
+      { label: "Купол, лестницу и силуэт прохожего.", response: "Хорошо. Ты уже выбираешь главное, а не пытаешься уместить весь Париж сразу.", effects: { assimilation: 8, energy: 3 } },
+      { label: "Только людей и их движение.", response: "Ещё лучше. Город узнаётся не по камню, а по тому, как в нём живут.", effects: { french: 3, assimilation: 8 } },
+    ] },
+    { intro: "Юки показывает тебе небольшую папку с работами.", greeting: "В районной галерее есть место для одного твоего рисунка. Решишься выставить?", choices: [
+      { label: "Да, выберем работу вместе.", response: "Мы берём самый честный набросок. На открытии незнакомые люди спрашивают о твоей истории.", effects: { assimilation: 10, stability: 6 } },
+      { label: "Пока помогу оформить выставку.", response: "Ты развешиваешь работы и знакомишься со всей мастерской — тоже способ стать частью сцены.", effects: { energy: -4, assimilation: 8, stability: 4 } },
+    ] },
+  ],
+  luc: [
+    { intro: "Люк встречает тебя у нового музейного зала.", greeting: "Сегодня сравним два портрета. Сначала читаем табличку или смотрим сами?", choices: [
+      { label: "Сначала посмотрим без подсказки.", response: "Верно. Ты замечаешь детали до того, как чужое объяснение успевает их заслонить.", effects: { french: 3, assimilation: 8 } },
+      { label: "Хочу понять исторический контекст.", response: "Тогда начнём с эпохи и заказчика. Картина сразу превращается из декорации в разговор.", effects: { french: 6, assimilation: 6 } },
+    ] },
+    { intro: "Люк уже доверяет тебе отвечать на вопросы посетителей.", greeting: "Группа школьников потерялась между залами. Поможешь провести короткую экскурсию?", choices: [
+      { label: "Проведу по трём любимым работам.", response: "Ты говоришь просто и живо. Люк улыбается: теперь музей звучит и твоим голосом.", effects: { french: 7, assimilation: 10, stability: 4 } },
+      { label: "Лучше помогу составить маршрут.", response: "Ты строишь понятный путь без музейного марафона. Учителя забирают схему с собой.", effects: { admin: 4, assimilation: 7 } },
+    ] },
+  ],
+  amina: [
+    { intro: "Амина уже знает, на какую работу можно на тебя рассчитывать.", greeting: "Сегодня придут две новые семьи. Встретишь их или займёшься вещами на складе?", choices: [
+      { label: "Встречу и объясню, как всё устроено.", response: "Ты узнаёшь в их растерянности себя и находишь именно те слова, которых когда-то не хватало.", effects: { french: 6, assimilation: 9 } },
+      { label: "Разберу склад и подготовлю наборы.", response: "К вечеру хаос превращается в подписанные коробки. Команде становится заметно легче.", effects: { energy: -6, admin: 4, stability: 6 } },
+    ] },
+    { intro: "Амина предлагает тебе больше ответственности.", greeting: "Хочешь сам организовать маленькую соседскую акцию в следующем месяце?", choices: [
+      { label: "Сделаем обмен книгами во дворе.", response: "Идея собирает весь квартал: дети приносят комиксы, соседи — романы, а ты ведёшь объявления.", effects: { french: 5, assimilation: 11, stability: 5 } },
+      { label: "Организуем помощь новым жильцам.", response: "Ты составляешь понятный список первых шагов и превращаешь собственный опыт в поддержку для других.", effects: { admin: 5, assimilation: 9, stability: 6 } },
+    ] },
+  ],
+  thomas: [
+    { intro: "Тома присылает тебе комментарии к резюме.", greeting: "В CV всё понятно, но слишком общо. Какое достижение поставим первым?", choices: [
+      { label: "Проект, где я отвечал за результат команды.", response: "Отлично. Добавим цифры и конкретную роль — теперь это доказательство, а не обещание.", effects: { french: 4, stability: 8 } },
+      { label: "Опыт адаптации и работы на другом языке.", response: "Сильная история. Покажем её как навык, а не как оправдание.", effects: { french: 6, assimilation: 5, stability: 5 } },
+    ] },
+    { intro: "Тома зовёт тебя на тренировочное собеседование.", greeting: "Последний вопрос: где вы видите себя через три года во Франции?", choices: [
+      { label: "В устойчивой команде с большей ответственностью.", response: "Конкретно и реалистично. Именно такой ответ показывает намерение строить жизнь надолго.", effects: { french: 5, stability: 10 } },
+      { label: "Хочу развиваться и приносить пользу городу.", response: "Хорошая ценность, но добавим план. После правки ответ звучит и искренне, и убедительно.", effects: { french: 5, assimilation: 7, stability: 6 } },
+    ] },
+  ],
+};
+
+function getNpcDialogues(npcId: string) {
+  return [dialogues[npcId], ...(moreDialogues[npcId] ?? [])];
+}
+
 const cityEvents: CityEvent[] = [
   { id: "canal-market", kicker: "СОБЫТИЕ ДНЯ", title: "Рынок у канала", body: "Соседи продают книги, пластинки и домашнюю выпечку. Малик ищет помощника на пару часов.", locationId: "cafe", hours: 2, effects: { money: 28, energy: -7, french: 3, assimilation: 6 } },
   { id: "night-museum", kicker: "СОБЫТИЕ ДНЯ", title: "Вечер в Лувре", body: "Сегодня музей работает допоздна, а Люк проводит короткую экскурсию для местных жителей.", locationId: "louvre", hours: 3, effects: { money: -9, energy: -8, french: 4, assimilation: 9 } },
@@ -515,6 +605,46 @@ const metroStopByLocation: Record<string, string> = {
   montmartre: "Anvers",
   notredame: "Saint-Michel",
 };
+
+const pixelMetroPaths = [
+  { id: "1", color: "#ffcd00", points: [[5, 53], [18, 51], [35, 52], [52, 54], [68, 57], [88, 61], [96, 62]] },
+  { id: "2", color: "#0064b0", points: [[7, 43], [18, 27], [37, 17], [55, 19], [73, 29], [91, 44]] },
+  { id: "3", color: "#9f9825", points: [[13, 34], [29, 31], [46, 33], [63, 38], [82, 39], [95, 34]] },
+  { id: "4", color: "#be418d", points: [[51, 5], [53, 20], [55, 38], [56, 55], [54, 70], [49, 91]] },
+  { id: "5", color: "#f28e42", points: [[69, 5], [67, 25], [66, 40], [68, 58], [72, 78], [77, 95]] },
+  { id: "6", color: "#77c695", points: [[7, 57], [17, 67], [31, 78], [48, 84], [67, 85], [85, 72], [92, 60]] },
+  { id: "7", color: "#f3a4ba", points: [[62, 4], [60, 23], [59, 42], [61, 58], [66, 76], [67, 96]] },
+  { id: "8", color: "#ceadd2", points: [[13, 73], [30, 68], [48, 61], [65, 50], [79, 35], [92, 24]] },
+  { id: "9", color: "#b6bd00", points: [[4, 46], [22, 43], [41, 40], [61, 38], [78, 39], [96, 46]] },
+  { id: "10", color: "#c9910d", points: [[18, 82], [33, 76], [48, 71], [61, 72], [74, 79], [88, 87]] },
+  { id: "11", color: "#704b1c", points: [[58, 55], [67, 44], [78, 34], [89, 24], [96, 18]] },
+  { id: "12", color: "#007852", points: [[36, 6], [39, 23], [42, 42], [44, 61], [42, 78], [38, 96]] },
+  { id: "13", color: "#6ec4e8", points: [[23, 5], [28, 24], [31, 43], [33, 62], [30, 82], [25, 96]] },
+  { id: "14", color: "#662483", points: [[47, 7], [48, 25], [50, 42], [53, 58], [57, 75], [62, 93]] },
+] as const;
+
+const pixelMetroStations = [
+  { name: "Charles de Gaulle–Étoile", short: "Étoile", x: 8, y: 48 },
+  { name: "Anvers", short: "Anvers", x: 40, y: 18 },
+  { name: "Barbès – Rochechouart", short: "Barbès", x: 52, y: 19 },
+  { name: "République", short: "République", x: 68, y: 38 },
+  { name: "Oberkampf", short: "Oberkampf", x: 76, y: 40 },
+  { name: "Franklin D. Roosevelt", short: "Franklin D.R.", x: 24, y: 50 },
+  { name: "Concorde", short: "Concorde", x: 36, y: 52 },
+  { name: "Palais Royal – Musée du Louvre", short: "Palais Royal", x: 48, y: 54 },
+  { name: "Châtelet", short: "Châtelet", x: 58, y: 56 },
+  { name: "Cité", short: "Cité", x: 57, y: 62 },
+  { name: "Saint-Michel", short: "Saint-Michel", x: 55, y: 69 },
+  { name: "Cluny – La Sorbonne", short: "Cluny", x: 53, y: 72 },
+  { name: "Odéon", short: "Odéon", x: 49, y: 73 },
+  { name: "Montparnasse – Bienvenüe", short: "Montparnasse", x: 42, y: 81 },
+  { name: "Bir-Hakeim", short: "Bir-Hakeim", x: 18, y: 66 },
+  { name: "Bastille", short: "Bastille", x: 70, y: 59 },
+  { name: "Nation", short: "Nation", x: 89, y: 62 },
+  { name: "Gare d’Austerlitz", short: "Austerlitz", x: 67, y: 76 },
+  { name: "Place d’Italie", short: "Italie", x: 70, y: 84 },
+  { name: "Gare de l’Est", short: "Gare de l’Est", x: 58, y: 27 },
+];
 
 const storyChapters: StoryChapter[] = [
   {
@@ -645,6 +775,36 @@ function LandmarkArt({ type }: { type: string }) {
   );
 }
 
+function PixelMetroMap({ trip, currentLeg }: { trip: MetroTrip; currentLeg: MetroLeg }) {
+  const routeLineIds = new Set(trip.legs.map((leg) => leg.lineId));
+  const routeStations = new Set(trip.legs.flatMap((leg) => [leg.from, leg.to]));
+  return (
+    <div className="pixel-metro-map" aria-label="Пиксельная схема метро Парижа">
+      <div className="metro-map-title"><b>MÉTRO PARIS</b><span>СХЕМА ЛИНИЙ · 8-BIT</span></div>
+      <div className="metro-map-seine"><i /><i /><i /></div>
+      {pixelMetroPaths.map((path) => (
+        <div className={`pixel-line line-${path.id} ${routeLineIds.has(path.id) ? "route-active" : ""}`} key={path.id}>
+          {path.points.slice(1).map((point, index) => {
+            const start = path.points[index];
+            const dx = point[0] - start[0];
+            const dy = point[1] - start[1];
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            return <i key={`${path.id}-${index}`} style={{ left: `${start[0]}%`, top: `${start[1]}%`, width: `${length}%`, background: path.color, transform: `rotate(${angle}deg)` }} />;
+          })}
+          <b style={{ left: `${path.points[0][0]}%`, top: `${path.points[0][1]}%`, background: path.color }}>{path.id}</b>
+        </div>
+      ))}
+      {pixelMetroStations.map((station) => {
+        const onRoute = routeStations.has(station.name);
+        const current = station.name === currentLeg.from;
+        return <div className={`pixel-station ${onRoute ? "on-route" : ""} ${current ? "current" : ""}`} style={{ left: `${station.x}%`, top: `${station.y}%` }} key={station.name}><i /><span>{station.short}</span></div>;
+      })}
+      <div className="metro-map-legend"><span><i className="map-current-dot" /> вы здесь</span><span><i className="map-route-dot" /> маршрут</span><b>{currentLeg.from} → {trip.destination.label}</b></div>
+    </div>
+  );
+}
+
 function LocationBackdrop({ location, sky }: { location: LocationDef; sky: string }) {
   return (
     <div className={`world-scene scene-${location.id} scene-time-${sky}`}>
@@ -678,6 +838,30 @@ function getTravelMinutes(from: LocationDef, to: LocationDef, mode: TravelMode) 
   if (mode === "bike") return Math.max(15, Math.round((metro * 1.12) / 5) * 5);
   if (mode === "walk") return Math.max(25, Math.round((metro * 2.15) / 5) * 5);
   return metro;
+}
+
+function getActivityKind(actionId: string): ActivityKind {
+  if (["unpack", "insurance", "address", "sleep"].includes(actionId)) return "home";
+  if (["shift", "espresso", "chat"].includes(actionId)) return "cafe";
+  if (["class", "library", "exam"].includes(actionId)) return "study";
+  if (["appointment", "copies", "taxes"].includes(actionId)) return "admin";
+  if (["museum", "sketch", "pleinair"].includes(actionId)) return "culture";
+  if (["walk", "picnic", "history"].includes(actionId)) return "walk";
+  return "community";
+}
+
+function getActivityStatus(kind: ActivityKind, progress: number) {
+  const copy: Record<ActivityKind, string[]> = {
+    home: ["Осматриваем квартиру…", "Раскладываем вещи…", "Дом становится своим…", "Готово"],
+    cafe: ["Открываем смену…", "Принимаем заказы…", "У стойки становится оживлённо…", "Смена закончена"],
+    study: ["Открываем конспект…", "Разбираем материал…", "Закрепляем главное…", "Занятие окончено"],
+    admin: ["Проверяем список…", "Сверяем документы…", "Ставим отметки…", "Документы приняты"],
+    culture: ["Входим в пространство…", "Смотрим внимательнее…", "Запоминаем детали…", "Впечатление осталось"],
+    walk: ["Выходим на улицу…", "Идём через квартал…", "Город меняется вокруг…", "Прогулка завершена"],
+    community: ["Собираемся вместе…", "Распределяем задачи…", "Помогаем команде…", "Общее дело сделано"],
+  };
+  const index = progress < 38 ? 0 : progress < 72 ? 1 : progress < 92 ? 2 : 3;
+  return copy[kind][index];
 }
 
 function getMetroLinesAtStation(station: string) {
@@ -802,6 +986,8 @@ export default function Home() {
   const [activeDialogue, setActiveDialogue] = useState<Npc | null>(null);
   const [dialogueResult, setDialogueResult] = useState("");
   const [dialogueStage, setDialogueStage] = useState<"intro" | "choice" | "result">("choice");
+  const [activeDialogueIndex, setActiveDialogueIndex] = useState(0);
+  const [npcDialogueProgress, setNpcDialogueProgress] = useState<Record<string, number>>({});
   const [showAchievements, setShowAchievements] = useState(false);
   const [showGameMenu, setShowGameMenu] = useState(false);
   const [statsExpanded, setStatsExpanded] = useState(false);
@@ -819,16 +1005,23 @@ export default function Home() {
   const [showEventReveal, setShowEventReveal] = useState(false);
   const [completedDailyTaskIds, setCompletedDailyTaskIds] = useState<string[]>([]);
   const [chapterProgressPoints, setChapterProgressPoints] = useState(0);
+  const [dayTransitionPhase, setDayTransitionPhase] = useState<"sunset" | "night" | "dawn" | null>(null);
+  const [dayTransitionText, setDayTransitionText] = useState("");
 
   const selectedRoute = routes.find((route) => route.id === routeId) ?? routes[0];
   const currentLocation = locations.find((location) => location.id === locationId) ?? locations[0];
   const currentNpc = npcs.find((npc) => npc.id === currentLocation.npc) ?? npcs[0];
+  const currentNpcDialogueCount = getNpcDialogues(currentNpc.id).length;
+  const currentNpcDialogueIndex = npcDialogueProgress[currentNpc.id] ?? 0;
+  const currentNpcHasDialogue = currentNpcDialogueIndex < currentNpcDialogueCount;
+  const activeDialogueDef = activeDialogue ? getNpcDialogues(activeDialogue.id)[activeDialogueIndex] : null;
   const goal = yearGoals[Math.min(year - 1, yearGoals.length - 1)];
   const chapter = storyChapters[Math.min(year - 1, storyChapters.length - 1)];
   const goalsMet = stats.french >= goal.french && stats.admin >= goal.admin && stats.assimilation >= goal.assimilation && stats.stability >= goal.stability;
   const dailyTasks = dailyTaskSets[(day - 1) % dailyTaskSets.length];
-  const allDailyTasksDone = dailyTasks.every((task) => completedDailyTaskIds.includes(task.id));
-  const nextDailyTask = dailyTasks.find((task) => !completedDailyTaskIds.includes(task.id)) ?? null;
+  const isDailyTaskDone = (task: DailyTask) => completedDailyTaskIds.includes(task.id) || (task.trigger === "talk" && (npcDialogueProgress[task.targetId] ?? 0) >= getNpcDialogues(task.targetId).length);
+  const allDailyTasksDone = dailyTasks.every(isDailyTaskDone);
+  const nextDailyTask = dailyTasks.find((task) => !isDailyTaskDone(task)) ?? null;
   const currentCityEvent = cityEvents[(day - 1) % cityEvents.length];
   const currentCityEventLocation = locations.find((location) => location.id === currentCityEvent.locationId) ?? locations[0];
   const currentCityEventKey = `${day}-${currentCityEvent.id}`;
@@ -840,6 +1033,7 @@ export default function Home() {
   const metroLineOptions = currentMetroLeg ? getMetroLinesAtStation(currentMetroLeg.from) : [];
   const travelOrigin = activeTravel ? locations.find((location) => location.id === activeTravel.originId) ?? locations[0] : null;
   const travelDestination = activeTravel ? locations.find((location) => location.id === activeTravel.destinationId) ?? locations[0] : null;
+  const activeActivityKind = activeAction ? getActivityKind(activeAction.action.id) : null;
 
   const getAchievementProgress = (achievement: AchievementDef) => {
     if (achievement.kind === "npcs") return metNpcs.length;
@@ -872,9 +1066,9 @@ export default function Home() {
 
   useEffect(() => {
     if (phase !== "game" || !profile.name) return;
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
-  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints]);
+  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress]);
 
   useEffect(() => {
     if (!toast) return;
@@ -883,13 +1077,13 @@ export default function Home() {
   }, [toast]);
 
   useEffect(() => {
-    const paused = phase !== "game" || !awake || !!activeTravel || !!activeAction || !!activeDialogue || !!activeEvent || !!pendingTravel || !!metroTrip || tutorialStep >= 0 || showEventReveal || showGameMenu || showJournal || showAchievements;
+    const paused = phase !== "game" || !awake || !!activeTravel || !!activeAction || !!activeDialogue || !!activeEvent || !!pendingTravel || !!metroTrip || !!dayTransitionPhase || tutorialStep >= 0 || showEventReveal || showGameMenu || showJournal || showAchievements;
     if (paused) return;
     const clock = window.setInterval(() => {
       setTime((value) => Math.min(23.95, value + 1 / 60));
     }, 2400);
     return () => window.clearInterval(clock);
-  }, [phase, awake, activeTravel, activeAction, activeDialogue, activeEvent, pendingTravel, metroTrip, tutorialStep, showEventReveal, showGameMenu, showJournal, showAchievements]);
+  }, [phase, awake, activeTravel, activeAction, activeDialogue, activeEvent, pendingTravel, metroTrip, dayTransitionPhase, tutorialStep, showEventReveal, showGameMenu, showJournal, showAchievements]);
 
   useEffect(() => {
     if (!activeTravel) return;
@@ -932,10 +1126,10 @@ export default function Home() {
     setYear(1); setDay(1); setTime(7); setLocationId("home"); setAwake(false);
     setActionCount(0); setSeenEvents([]); setMetNpcs([]);
     setDailyProgress(emptyDayProgress); setDailyRewardClaimed(false); setVisitedLocations(["home"]); setCompletedCityEvents([]);
-    setCompletedDailyTaskIds([]); setChapterProgressPoints(0);
-    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setShowAchievements(false); setShowGameMenu(false);
+    setCompletedDailyTaskIds([]); setChapterProgressPoints(0); setNpcDialogueProgress({});
+    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setActiveDialogueIndex(0); setShowAchievements(false); setShowGameMenu(false);
     setStatsExpanded(false); setStoryExpanded(false); setSideTab("actions");
-    setMetroTrip(null); setActiveTravel(null); setTravelProgress(0); setActiveAction(null); setActionProgress(0); setShowEventReveal(false);
+    setMetroTrip(null); setActiveTravel(null); setTravelProgress(0); setActiveAction(null); setActionProgress(0); setShowEventReveal(false); setDayTransitionPhase(null);
     setViewMode("scene"); setPendingTravel(null); setTutorialStep(0);
     setJournal([`${profile.name} начинает путь «${selectedRoute.label}».`, "Ты прибыл в Париж. Всё только начинается."]);
     setPhase("game");
@@ -949,6 +1143,7 @@ export default function Home() {
     setDailyProgress(savedGame.dailyProgress ?? emptyDayProgress); setDailyRewardClaimed(savedGame.dailyRewardClaimed ?? false);
     setVisitedLocations(savedGame.visitedLocations ?? [savedGame.locationId]); setCompletedCityEvents(savedGame.completedCityEvents ?? []);
     setCompletedDailyTaskIds(savedGame.completedDailyTaskIds ?? []); setChapterProgressPoints(savedGame.chapterProgressPoints ?? 0);
+    setNpcDialogueProgress(savedGame.npcDialogueProgress ?? {});
     setAwake(true); setViewMode("scene"); setTutorialStep(-1); setSideTab("actions"); setActiveAction(null); setShowEventReveal(false); setPhase("game");
   };
 
@@ -958,7 +1153,7 @@ export default function Home() {
   };
 
   const exitToTitle = () => {
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
     setSavedGame(save);
     setPhase("intro");
@@ -971,13 +1166,22 @@ export default function Home() {
     setToast(`День ${day} начался в ${formatTime(hour)}`);
   };
 
-  const finishDay = () => {
-    setDay((value) => value + 1); setTime(6); setAwake(false); setLocationId("home");
-    setDailyProgress(emptyDayProgress); setDailyRewardClaimed(false); setCompletedDailyTaskIds([]);
-    setViewMode("scene");
-    setStats((current) => applyEffects(current, { energy: 18 }));
-    addJournal(`День ${day} завершён. Париж затихает за окном.`);
+  const startDayTransition = (message = "Дела закончены. Пора возвращаться в мансарду.") => {
+    if (dayTransitionPhase) return;
+    setDayTransitionText(message);
+    setDayTransitionPhase("sunset");
+    window.setTimeout(() => setDayTransitionPhase("night"), 650);
+    window.setTimeout(() => {
+      setDay((value) => value + 1); setTime(6); setAwake(false); setLocationId("home");
+      setDailyProgress(emptyDayProgress); setDailyRewardClaimed(false); setCompletedDailyTaskIds([]);
+      setViewMode("scene"); setStats((current) => applyEffects(current, { energy: 12 }));
+      setDayTransitionPhase("dawn");
+      addJournal(`День ${day} завершён. Париж затихает за окном.`);
+    }, 1300);
+    window.setTimeout(() => setDayTransitionPhase(null), 2500);
   };
+
+  const finishDay = () => startDayTransition();
 
   const maybeTriggerEvent = (nextCount: number) => {
     const thresholds = [1, 4, 7, 10, 14, 18];
@@ -1030,8 +1234,8 @@ export default function Home() {
       setToast(`${action.label} · прошло ${action.hours} ч.`);
       maybeTriggerEvent(nextCount);
       if (nextTime >= 24) {
-        setDay((value) => value + 1); setTime(6); setAwake(false); setLocationId("home");
-        setDailyProgress(emptyDayProgress); setDailyRewardClaimed(false); setCompletedDailyTaskIds([]);
+        setTime(23.9);
+        startDayTransition("Позднее дело закончено. Ночной Париж провожает тебя домой.");
       } else {
         setTime(nextTime);
       }
@@ -1106,13 +1310,15 @@ export default function Home() {
   };
 
   const talkToNpc = () => {
+    if (!currentNpcHasDialogue) return;
     setActiveDialogue(currentNpc);
+    setActiveDialogueIndex(currentNpcDialogueIndex);
     setDialogueResult("");
     setDialogueStage(metNpcs.includes(currentNpc.id) ? "choice" : "intro");
   };
 
   const chooseDialogue = (choice: DialogueChoice) => {
-    if (!activeDialogue) return;
+    if (!activeDialogue || !activeDialogueDef) return;
     const firstMeeting = !metNpcs.includes(activeDialogue.id);
     const baseEffects: Partial<Stats> = { energy: -3, french: firstMeeting ? 2 : 1, assimilation: firstMeeting ? 3 : 1 };
     const combinedEffects: Partial<Stats> = {
@@ -1140,6 +1346,7 @@ export default function Home() {
     }));
     setDialogueResult(choice.response);
     setDialogueStage("result");
+    setNpcDialogueProgress((progress) => ({ ...progress, [activeDialogue.id]: Math.max(progress[activeDialogue.id] ?? 0, activeDialogueIndex + 1) }));
     addJournal(`${activeDialogue.name}: ${choice.response}`);
     setToast(firstMeeting ? `Новое знакомство: ${activeDialogue.name}` : `Разговор повлиял на твою историю`);
   };
@@ -1390,11 +1597,11 @@ export default function Home() {
             {statsExpanded && <div className="secondary-stats"><StatMeter label="Французский" value={stats.french} icon="FR" /><StatMeter label="Досье" value={stats.admin} icon="▤" /><StatMeter label="Интеграция" value={stats.assimilation} icon="◆" /><StatMeter label="Опора" value={stats.stability} icon="⌂" /></div>}
           </div>
           <div className="daily-plan-card">
-            <div className="daily-plan-head"><span>МАРШРУТ ДНЯ · ДЕНЬ {day}</span><b>{dailyTasks.filter((task) => completedDailyTaskIds.includes(task.id)).length}/{dailyTasks.length}</b></div>
+            <div className="daily-plan-head"><span>МАРШРУТ ДНЯ · ДЕНЬ {day}</span><b>{dailyTasks.filter(isDailyTaskDone).length}/{dailyTasks.length}</b></div>
             <h3>{nextDailyTask ? `Сейчас: ${nextDailyTask.label}` : "Маршрут дня завершён"}</h3>
             <div className="daily-task-list">
               {dailyTasks.map((task, index) => {
-                const done = completedDailyTaskIds.includes(task.id);
+                const done = isDailyTaskDone(task);
                 const current = nextDailyTask?.id === task.id;
                 return <button className={`daily-task ${done ? "done" : ""} ${current ? "current" : ""}`} key={task.id} onClick={() => guideDailyTask(task)} disabled={done}><i>{done ? "✓" : index + 1}</i><div><strong>{task.label}</strong><small>{task.detail}</small></div><b>{done ? "ГОТОВО" : current ? "ПОКАЗАТЬ →" : "ПОТОМ"}</b></button>;
               })}
@@ -1441,7 +1648,7 @@ export default function Home() {
           <p className="location-one-line">{currentLocation.description}</p>
           <div className="side-tabs" role="tablist" aria-label="Действия в локации"><button className={sideTab === "actions" ? "active" : ""} onClick={() => setSideTab("actions")}>Дела</button><button className={sideTab === "people" ? "active" : ""} onClick={() => setSideTab("people")}>Люди</button><button className={sideTab === "event" ? "active" : ""} onClick={() => setSideTab("event")}>Ивент <i>{cityEventDone ? "✓" : "1"}</i></button></div>
           {sideTab === "actions" && <div className="side-tab-content"><div className="actions-title"><span>ДОСТУПНЫЕ ДЕЛА</span><b>{awake ? `≈ ${Math.max(0, Math.floor(24 - time))} ч. осталось` : "сначала проснись"}</b></div><div className="action-list">{currentLocation.actions.map((action) => <button className={nextDailyTask?.trigger === "action" && nextDailyTask.targetId === action.id && nextDailyTask.locationId === currentLocation.id ? "quest-action" : ""} key={action.id} disabled={!awake} onClick={() => performAction(action)}><span className="action-icon">{action.icon}</span><span><strong>{action.label}</strong><small>{action.detail} · {action.hours} ч.</small></span><b>›</b></button>)}</div>{awake && <button className="end-day" onClick={finishDay}>Завершить день · вернуться домой</button>}</div>}
-          {sideTab === "people" && <div className="side-tab-content people-tab"><div className="npc-card"><PixelPortrait npc={currentNpc} small /><div><span>{currentNpc.role}</span><strong>{currentNpc.name}</strong><p>{metNpcs.includes(currentNpc.id) ? `«${currentNpc.line}»` : "Вы ещё не знакомы. Начните с представления."}</p></div></div><button className="talk-button" disabled={!awake} onClick={talkToNpc}>Начать диалог · 5 мин. {metNpcs.includes(currentNpc.id) ? "" : "· представиться"}</button><div className="people-progress"><span>Знакомства в Париже</span><b>{metNpcs.length}/{npcs.length}</b></div></div>}
+          {sideTab === "people" && <div className="side-tab-content people-tab"><div className="npc-card"><PixelPortrait npc={currentNpc} small /><div><span>{currentNpc.role}</span><strong>{currentNpc.name}</strong><p>{!currentNpcHasDialogue ? "Вы уже обсудили всё важное. История этого знакомства завершена." : metNpcs.includes(currentNpc.id) ? `«${currentNpc.line}»` : "Вы ещё не знакомы. Начните с представления."}</p></div></div>{currentNpcHasDialogue && <button className="talk-button" disabled={!awake} onClick={talkToNpc}>Начать диалог · 5 мин. {metNpcs.includes(currentNpc.id) ? `· разговор ${currentNpcDialogueIndex + 1}/${currentNpcDialogueCount}` : "· представиться"}</button>}<div className="people-progress"><span>{currentNpcHasDialogue ? "Разговоры с персонажем" : "Все разговоры завершены"}</span><b>{currentNpcDialogueIndex}/{currentNpcDialogueCount}</b></div></div>}
           {sideTab === "event" && <div className="side-tab-content"><div className={`city-event-card ${cityEventDone ? "completed" : ""}`}><div><span>{currentCityEvent.kicker}</span><b>{currentCityEvent.hours} ч.</b></div><h3>{currentCityEvent.title}</h3><p>{currentCityEvent.body}</p><small>⌖ {currentCityEventLocation.label} · {currentCityEventLocation.district}</small><button disabled={!awake || cityEventDone} onClick={participateCityEvent}>{cityEventDone ? "✓ Событие завершено" : locationId === currentCityEvent.locationId ? "Участвовать сейчас →" : "Показать место на карте →"}</button></div></div>}
         </aside>
       </div>
@@ -1470,11 +1677,8 @@ export default function Home() {
           <section className="metro-simulator">
             <button className="modal-close" onClick={() => setMetroTrip(null)}>×</button>
             <header className="metro-sim-header"><div className="metro-mark">M</div><div><span>PARIS MÉTRO · НАВИГАЦИЯ</span><h2>{currentMetroLeg.from}</h2><p>Маршрут до {metroTrip.destination.label} · примерно {metroTrip.minutes} мин.</p></div></header>
-            <div className="metro-journey-strip">
-              {metroTrip.legs.map((leg, index) => { const line = metroLines[leg.lineId]; return <div className={`${index < metroStep ? "done" : index === metroStep ? "current" : ""}`} key={`${leg.lineId}-${leg.from}`}><i style={{ background: line.color, color: line.text }}>{line.id}</i><span><b>{leg.from}</b><small>{index < metroTrip.legs.length - 1 ? `Пересадка: ${leg.to}` : `Выход: ${leg.to}`}</small></span></div>; })}
-            </div>
-            <div className="metro-pocket-map"><div><span>СХЕМА МАРШРУТА</span><b>Можно сверяться на каждом шаге</b></div>{metroTrip.legs.map((leg, index) => { const line = metroLines[leg.lineId]; return <article className={index === metroStep ? "current" : ""} key={`hint-${leg.lineId}-${leg.from}`}><i style={{ background: line.color, color: line.text }}>{line.id}</i><p><strong>{leg.from} → {leg.to}</strong><small>direction <b>{leg.direction}</b> · {leg.stops} ост.</small></p></article>; })}</div>
-            <div className="metro-platform-board"><span>ÉTAPE {metroStep + 1}/{metroTrip.legs.length}</span><strong>{metroStage === "line" ? "На какую линию перейти?" : "В каком направлении ехать?"}</strong><p>{metroMessage}</p></div>
+            <PixelMetroMap trip={metroTrip} currentLeg={currentMetroLeg} />
+            <div className="metro-platform-board"><span>СТАНЦИЯ · {currentMetroLeg.from}</span><strong>{metroStage === "line" ? "Выберите линию по общей схеме" : "Выберите платформу по конечной станции"}</strong><p>{metroMessage}</p></div>
             {metroStage === "line" ? <div className="metro-choice-grid line-choices">{metroLineOptions.map((line) => <button key={line.id} onClick={() => chooseMetroLine(line.id)}><i style={{ background: line.color, color: line.text }}>{line.id}</i><span><strong>{line.name}</strong><small>Платформа на станции {currentMetroLeg.from}</small></span><b>→</b></button>)}</div> : <div className="metro-choice-grid direction-choices">{[currentMetroLine.stations[0], currentMetroLine.stations[currentMetroLine.stations.length - 1]].map((direction) => <button key={direction} onClick={() => chooseMetroDirection(direction)}><i style={{ background: currentMetroLine.color, color: currentMetroLine.text }}>{metroSelectedLine}</i><span><strong>Direction {direction}</strong><small>{currentMetroLeg.stops} ост. до {currentMetroLeg.to}</small></span><b>→</b></button>)}</div>}
             <div className="metro-map-key"><span><i className="metro-symbol transfer" /> correspondance = пересадка</span><span><i className="metro-symbol exit" /> sortie = выход</span><p>Ошибиться можно: игра подскажет, почему выбранная платформа не подходит.</p></div>
           </section>
@@ -1499,10 +1703,19 @@ export default function Home() {
         </div>
       )}
 
-      {activeAction && (
+      {activeAction && activeActivityKind && (
         <div className="action-transition-screen">
-          <div className={`action-transition-art action-art-${activeAction.locationId}`}><i>{activeAction.action.icon}</i><span /><span /><span /></div>
-          <section><p>ВЫПОЛНЯЕТСЯ · {locations.find((location) => location.id === activeAction.locationId)?.short}</p><h2>{activeAction.action.label}</h2><strong>{actionProgress < 38 ? "Начинаем…" : actionProgress < 72 ? "Дело продвигается…" : actionProgress < 92 ? "Последние штрихи…" : "Готово"}</strong><div className="action-progress-track"><span style={{ width: `${actionProgress}%` }} /></div><small>Игровое время: {formatTime(activeAction.startTime)} → {formatTime(activeAction.startTime + activeAction.action.hours)}</small></section>
+          <div className={`activity-stage activity-${activeActivityKind}`}><div className="activity-backdrop"><i className="set-a" /><i className="set-b" /><i className="set-c" /></div><div className="activity-person main"><i className="act-head" /><i className="act-body" /><i className="act-arm" /><i className="act-leg left" /><i className="act-leg right" /></div><div className="activity-person second"><i className="act-head" /><i className="act-body" /><i className="act-arm" /><i className="act-leg left" /><i className="act-leg right" /></div><div className="activity-prop"><i /><i /><i /></div></div>
+          <section><p>ВЫПОЛНЯЕТСЯ · {locations.find((location) => location.id === activeAction.locationId)?.short}</p><h2>{activeAction.action.label}</h2><strong>{getActivityStatus(activeActivityKind, actionProgress)}</strong><div className="action-progress-track"><span style={{ width: `${actionProgress}%` }} /></div><small>Игровое время: {formatTime(activeAction.startTime)} → {formatTime(activeAction.startTime + activeAction.action.hours)}</small></section>
+        </div>
+      )}
+
+      {dayTransitionPhase && (
+        <div className={`day-cycle-transition phase-${dayTransitionPhase}`}>
+          <div className="cycle-sky"><i className="cycle-sun" /><i className="cycle-moon" /><span className="cycle-cloud one" /><span className="cycle-cloud two" /></div>
+          <div className="cycle-city"><i /><i /><i /><i /><i /></div>
+          <div className="cycle-window-row"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+          <section><p>{dayTransitionPhase === "dawn" ? `ДЕНЬ ${day} · 06:00` : `ДЕНЬ ${day} · ${dayTransitionPhase === "sunset" ? "ВЕЧЕР" : "НОЧЬ"}`}</p><h2>{dayTransitionPhase === "sunset" ? "Париж замедляется" : dayTransitionPhase === "night" ? "Город засыпает" : "Начинается новое утро"}</h2><span>{dayTransitionPhase === "dawn" ? "Скоро можно будет выбрать время подъёма." : dayTransitionText}</span><div className="cycle-progress"><i className={dayTransitionPhase === "sunset" || dayTransitionPhase === "night" || dayTransitionPhase === "dawn" ? "active" : ""} /><i className={dayTransitionPhase === "night" || dayTransitionPhase === "dawn" ? "active" : ""} /><i className={dayTransitionPhase === "dawn" ? "active" : ""} /></div></section>
         </div>
       )}
 
@@ -1515,15 +1728,15 @@ export default function Home() {
         </div>
       )}
 
-      {activeDialogue && (
+      {activeDialogue && activeDialogueDef && (
         <div className="modal-backdrop dialogue-backdrop">
           <section className="dialogue-modal">
             <button className="modal-close" onClick={closeDialogue}>×</button>
             <div className="dialogue-speaker"><PixelPortrait npc={activeDialogue} /><span>{activeDialogue.role}</span><h2>{activeDialogue.name}</h2><small>{currentLocation.label}</small></div>
             <div className="dialogue-content">
               <p className="eyebrow ink">{dialogueStage === "intro" ? "НОВОЕ ЗНАКОМСТВО" : "ДИАЛОГ · ОКОЛО 5 МИНУТ"}</p>
-              {dialogueStage === "intro" && <><div className="character-introduction"><span>КТО ЭТО?</span><p>{dialogues[activeDialogue.id].intro}</p></div><button className="pixel-button primary" onClick={() => setDialogueStage("choice")}>Поздороваться и представиться →</button></>}
-              {dialogueStage === "choice" && <><blockquote>«{dialogues[activeDialogue.id].greeting}»</blockquote><div className="dialogue-choices">{dialogues[activeDialogue.id].choices.map((choice) => <button key={choice.label} onClick={() => chooseDialogue(choice)}><span>Ответить:</span><strong>«{choice.label}»</strong><b>→</b></button>)}</div></>}
+              {dialogueStage === "intro" && <><div className="character-introduction"><span>КТО ЭТО?</span><p>{activeDialogueDef.intro}</p></div><button className="pixel-button primary" onClick={() => setDialogueStage("choice")}>Поздороваться и представиться →</button></>}
+              {dialogueStage === "choice" && <><div className="dialogue-episode">РАЗГОВОР {activeDialogueIndex + 1} ИЗ {getNpcDialogues(activeDialogue.id).length}</div><blockquote>«{activeDialogueDef.greeting}»</blockquote><div className="dialogue-choices">{activeDialogueDef.choices.map((choice) => <button key={choice.label} onClick={() => chooseDialogue(choice)}><span>Ответить:</span><strong>«{choice.label}»</strong><b>→</b></button>)}</div></>}
               {dialogueStage === "result" && <><blockquote>«{dialogueResult}»</blockquote><div className="dialogue-time-note">Прошло около 5 минут · ответ записан в журнал</div><button className="pixel-button primary" onClick={closeDialogue}>Продолжить день →</button></>}
             </div>
           </section>
@@ -1539,7 +1752,7 @@ export default function Home() {
         </div>
       )}
 
-      {!awake && !activeEvent && !activeDialogue && tutorialStep < 0 && !pendingTravel && (
+      {!awake && !activeEvent && !activeDialogue && !dayTransitionPhase && tutorialStep < 0 && !pendingTravel && (
         <div className="modal-backdrop morning-backdrop">
           <section className="morning-modal">
             <div className={`window-view sky-${sky}`}><div className="window-sun" /><div className="window-roofs" /><span>PARIS · ДЕНЬ {day}</span></div>

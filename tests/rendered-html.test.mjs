@@ -61,6 +61,11 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(page, /completedDailyTaskIds/);
   assert.match(page, /showEventReveal/);
   assert.match(page, /actionProgress/);
+  assert.match(page, /moreDialogues/);
+  assert.match(page, /npcDialogueProgress/);
+  assert.match(page, /PixelMetroMap/);
+  assert.match(page, /dayTransitionPhase/);
+  assert.match(page, /getActivityKind/);
   assert.match(page, /Начать диалог · 5 мин/);
   assert.doesNotMatch(page, /type="range"/);
   assert.doesNotMatch(page, /Разобрать письма|Приготовить ужин/);
@@ -80,6 +85,9 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(css, /metro-pocket-map/);
   assert.match(css, /event-reveal-modal/);
   assert.match(css, /action-transition-screen/);
+  assert.match(css, /pixel-metro-map/);
+  assert.match(css, /activity-stage/);
+  assert.match(css, /day-cycle-transition/);
   assert.match(layout, /lang="ru"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 });
