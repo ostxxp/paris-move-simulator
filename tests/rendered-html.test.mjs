@@ -54,6 +54,10 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(page, /achievementDefs/);
   assert.match(page, /cityEvents/);
   assert.match(page, /activeDialogue/);
+  assert.match(page, /metroLines/);
+  assert.match(page, /buildMetroRoute/);
+  assert.match(page, /chooseMetroDirection/);
+  assert.match(page, /activeTravel/);
   assert.match(css, /pixel-portrait/);
   assert.match(css, /sky-sunset/);
   assert.match(css, /world-scene/);
@@ -63,6 +67,9 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(css, /dialogue-modal/);
   assert.match(css, /achievements-modal/);
   assert.match(css, /city-event-card/);
+  assert.match(css, /metro-simulator/);
+  assert.match(css, /travel-loading-screen/);
+  assert.match(css, /side-tabs/);
   assert.match(layout, /lang="ru"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 });

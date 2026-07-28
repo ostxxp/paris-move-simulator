@@ -49,6 +49,38 @@ type LocationDef = {
 };
 
 type TravelMode = "metro" | "bike" | "walk";
+type SideTab = "actions" | "people" | "event";
+type MetroDecisionStage = "line" | "direction";
+
+type MetroLineDef = {
+  id: string;
+  name: string;
+  color: string;
+  text: string;
+  stations: string[];
+};
+
+type MetroLeg = {
+  lineId: string;
+  from: string;
+  to: string;
+  direction: string;
+  stops: number;
+};
+
+type MetroTrip = {
+  destination: LocationDef;
+  legs: MetroLeg[];
+  minutes: number;
+};
+
+type ActiveTravel = {
+  mode: TravelMode;
+  originId: string;
+  destinationId: string;
+  minutes: number;
+  legs: MetroLeg[];
+};
 
 type DayProgress = {
   actions: number;
@@ -444,6 +476,29 @@ const achievementDefs: AchievementDef[] = [
   { id: "local", icon: "◆", title: "Почти свой", description: "Поднять интеграцию до 65%", kind: "assimilation", target: 65 },
 ];
 
+const metroLines: Record<string, MetroLineDef> = {
+  "1": { id: "1", name: "Линия 1", color: "#ffcd00", text: "#1d2430", stations: ["Charles de Gaulle–Étoile", "Franklin D. Roosevelt", "Concorde", "Palais Royal – Musée du Louvre", "Châtelet", "Bastille", "Nation"] },
+  "2": { id: "2", name: "Линия 2", color: "#0064b0", text: "#fff", stations: ["Charles de Gaulle–Étoile", "Anvers", "Barbès – Rochechouart", "Nation"] },
+  "4": { id: "4", name: "Линия 4", color: "#be418d", text: "#fff", stations: ["Porte de Clignancourt", "Barbès – Rochechouart", "Châtelet", "Cité", "Saint-Michel", "Odéon", "Montparnasse – Bienvenüe", "Bagneux – Lucie Aubrac"] },
+  "5": { id: "5", name: "Линия 5", color: "#f28e42", text: "#1d2430", stations: ["Bobigny–Pablo Picasso", "République", "Bastille", "Gare d’Austerlitz", "Place d’Italie"] },
+  "6": { id: "6", name: "Линия 6", color: "#77c695", text: "#1d2430", stations: ["Charles de Gaulle–Étoile", "Bir-Hakeim", "Montparnasse – Bienvenüe", "Place d’Italie", "Nation"] },
+  "7": { id: "7", name: "Линия 7", color: "#f3a4ba", text: "#1d2430", stations: ["La Courneuve", "Gare de l’Est", "Châtelet", "Palais Royal – Musée du Louvre", "Villejuif"] },
+  "9": { id: "9", name: "Линия 9", color: "#b6bd00", text: "#1d2430", stations: ["Pont de Sèvres", "Franklin D. Roosevelt", "République", "Oberkampf", "Mairie de Montreuil"] },
+  "10": { id: "10", name: "Линия 10", color: "#c9910d", text: "#fff", stations: ["Boulogne", "Duroc", "Montparnasse – Bienvenüe", "Odéon", "Cluny – La Sorbonne", "Gare d’Austerlitz"] },
+  "11": { id: "11", name: "Линия 11", color: "#704b1c", text: "#fff", stations: ["Rosny–Bois-Perrier", "République", "Châtelet"] },
+};
+
+const metroStopByLocation: Record<string, string> = {
+  home: "Oberkampf",
+  sorbonne: "Cluny – La Sorbonne",
+  cafe: "République",
+  prefecture: "Cité",
+  louvre: "Palais Royal – Musée du Louvre",
+  eiffel: "Bir-Hakeim",
+  montmartre: "Anvers",
+  notredame: "Saint-Michel",
+};
+
 const storyChapters: StoryChapter[] = [
   {
     episode: "ГЛАВА I · ПРИБЫТИЕ",
@@ -503,9 +558,9 @@ const tutorialSteps = [
   },
   {
     kicker: "ОБУЧЕНИЕ · 4/4",
-    title: "Сначала построй маршрут",
-    body: "Карта показывает реальные названия районов и достопримечательностей. Нажми на место, сравни метро, велосипед и прогулку, затем подтверди поездку.",
-    tip: "Время в пути приблизительное и зависит от расстояния.",
+    title: "Построй маршрут и доберись",
+    body: "Выбери место на карте, затем способ поездки. Для метро нужно найти линию, правильное направление и пересадки; прогулка и Vélib’ показываются отдельными дорожными сценами.",
+    tip: "В метро direction — это конечная станция нужной платформы.",
   },
 ];
 
@@ -608,6 +663,82 @@ function getTravelMinutes(from: LocationDef, to: LocationDef, mode: TravelMode) 
   return metro;
 }
 
+function getMetroLinesAtStation(station: string) {
+  return Object.values(metroLines).filter((line) => line.stations.includes(station));
+}
+
+function buildMetroRoute(fromLocationId: string, toLocationId: string): MetroLeg[] {
+  const startStation = metroStopByLocation[fromLocationId];
+  const finishStation = metroStopByLocation[toLocationId];
+  if (!startStation || !finishStation || startStation === finishStation) return [];
+
+  type MetroState = { station: string; lineId: string };
+  type QueueItem = { state: MetroState; path: MetroState[] };
+  const queue: QueueItem[] = getMetroLinesAtStation(startStation).map((line) => ({
+    state: { station: startStation, lineId: line.id },
+    path: [{ station: startStation, lineId: line.id }],
+  }));
+  const visited = new Set(queue.map((item) => `${item.state.station}|${item.state.lineId}`));
+  let winningPath: MetroState[] = [];
+
+  while (queue.length) {
+    const item = queue.shift();
+    if (!item) break;
+    const { station, lineId } = item.state;
+    if (station === finishStation) {
+      winningPath = item.path;
+      break;
+    }
+
+    const line = metroLines[lineId];
+    const stationIndex = line.stations.indexOf(station);
+    const neighbours: MetroState[] = [];
+    if (stationIndex > 0) neighbours.push({ station: line.stations[stationIndex - 1], lineId });
+    if (stationIndex < line.stations.length - 1) neighbours.push({ station: line.stations[stationIndex + 1], lineId });
+    getMetroLinesAtStation(station).forEach((transferLine) => {
+      if (transferLine.id !== lineId) neighbours.push({ station, lineId: transferLine.id });
+    });
+
+    neighbours.forEach((nextState) => {
+      const key = `${nextState.station}|${nextState.lineId}`;
+      if (visited.has(key)) return;
+      visited.add(key);
+      queue.push({ state: nextState, path: [...item.path, nextState] });
+    });
+  }
+
+  if (!winningPath.length) return [];
+  const legs: MetroLeg[] = [];
+  let lineId = winningPath[0].lineId;
+  let legStart = winningPath[0].station;
+
+  const addLeg = (legEnd: string) => {
+    if (legStart === legEnd) return;
+    const line = metroLines[lineId];
+    const startIndex = line.stations.indexOf(legStart);
+    const endIndex = line.stations.indexOf(legEnd);
+    legs.push({
+      lineId,
+      from: legStart,
+      to: legEnd,
+      direction: endIndex > startIndex ? line.stations[line.stations.length - 1] : line.stations[0],
+      stops: Math.abs(endIndex - startIndex),
+    });
+  };
+
+  for (let index = 1; index < winningPath.length; index += 1) {
+    const previous = winningPath[index - 1];
+    const current = winningPath[index];
+    if (current.lineId !== lineId) {
+      addLeg(previous.station);
+      lineId = current.lineId;
+      legStart = current.station;
+    }
+  }
+  addLeg(winningPath[winningPath.length - 1].station);
+  return legs;
+}
+
 function StatMeter({ label, value, icon, money = false }: { label: string; value: number; icon: string; money?: boolean }) {
   return (
     <div className={`stat-meter ${money ? "is-money" : ""}`}>
@@ -654,6 +785,17 @@ export default function Home() {
   const [activeDialogue, setActiveDialogue] = useState<Npc | null>(null);
   const [dialogueResult, setDialogueResult] = useState("");
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showGameMenu, setShowGameMenu] = useState(false);
+  const [statsExpanded, setStatsExpanded] = useState(false);
+  const [storyExpanded, setStoryExpanded] = useState(false);
+  const [sideTab, setSideTab] = useState<SideTab>("actions");
+  const [metroTrip, setMetroTrip] = useState<MetroTrip | null>(null);
+  const [metroStep, setMetroStep] = useState(0);
+  const [metroStage, setMetroStage] = useState<MetroDecisionStage>("line");
+  const [metroSelectedLine, setMetroSelectedLine] = useState("");
+  const [metroMessage, setMetroMessage] = useState("");
+  const [activeTravel, setActiveTravel] = useState<ActiveTravel | null>(null);
+  const [travelProgress, setTravelProgress] = useState(0);
 
   const selectedRoute = routes.find((route) => route.id === routeId) ?? routes[0];
   const currentLocation = locations.find((location) => location.id === locationId) ?? locations[0];
@@ -669,6 +811,11 @@ export default function Home() {
   const cityEventDone = completedCityEvents.includes(currentCityEventKey);
   const chapterProgress = Math.round(((["french", "admin", "assimilation", "stability"] as const)
     .reduce((sum, key) => sum + Math.min(stats[key] / goal[key], 1), 0) / 4) * 100);
+  const currentMetroLeg = metroTrip?.legs[metroStep] ?? null;
+  const currentMetroLine = currentMetroLeg ? metroLines[currentMetroLeg.lineId] : null;
+  const metroLineOptions = currentMetroLeg ? getMetroLinesAtStation(currentMetroLeg.from) : [];
+  const travelOrigin = activeTravel ? locations.find((location) => location.id === activeTravel.originId) ?? locations[0] : null;
+  const travelDestination = activeTravel ? locations.find((location) => location.id === activeTravel.destinationId) ?? locations[0] : null;
 
   const getAchievementProgress = (achievement: AchievementDef) => {
     if (achievement.kind === "npcs") return metNpcs.length;
@@ -711,6 +858,35 @@ export default function Home() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  useEffect(() => {
+    if (!activeTravel) return;
+    const progressTimers = [
+      window.setTimeout(() => setTravelProgress(34), 420),
+      window.setTimeout(() => setTravelProgress(67), 980),
+      window.setTimeout(() => setTravelProgress(88), 1550),
+    ];
+    const arrivalTimer = window.setTimeout(() => {
+      const origin = locations.find((location) => location.id === activeTravel.originId) ?? locations[0];
+      const destination = locations.find((location) => location.id === activeTravel.destinationId) ?? locations[0];
+      const effects: Partial<Stats> = activeTravel.mode === "metro" ? { money: -2, energy: -2 } : activeTravel.mode === "bike" ? { money: -2, energy: -6 } : { energy: -9 };
+      const transport = activeTravel.mode === "metro" ? "Métro" : activeTravel.mode === "bike" ? "Vélib’" : "Пешком";
+      setLocationId(destination.id);
+      setVisitedLocations((items) => items.includes(destination.id) ? items : [...items, destination.id]);
+      setDailyProgress((progress) => ({ ...progress, travels: progress.travels + 1 }));
+      setTime((value) => value + activeTravel.minutes / 60);
+      setStats((current) => applyEffects(current, effects));
+      setJournal((items) => [`${formatTime(time)} · ${transport}: ${origin.label} → ${destination.label}, около ${activeTravel.minutes} мин.`, ...items].slice(0, 30));
+      setTravelProgress(100);
+      setActiveTravel(null);
+      setViewMode("scene");
+      setToast(`${transport} · прибытие примерно в ${formatTime(time + activeTravel.minutes / 60)}`);
+    }, 2200);
+    return () => {
+      progressTimers.forEach((timer) => window.clearTimeout(timer));
+      window.clearTimeout(arrivalTimer);
+    };
+  }, [activeTravel, time]);
+
   const addJournal = (entry: string) => setJournal((items) => [entry, ...items].slice(0, 30));
 
   const beginGame = () => {
@@ -718,7 +894,9 @@ export default function Home() {
     setYear(1); setDay(1); setTime(7); setLocationId("home"); setAwake(false);
     setActionCount(0); setSeenEvents([]); setMetNpcs([]);
     setDailyProgress(emptyDayProgress); setDailyRewardClaimed(false); setVisitedLocations(["home"]); setCompletedCityEvents([]);
-    setActiveDialogue(null); setDialogueResult(""); setShowAchievements(false);
+    setActiveDialogue(null); setDialogueResult(""); setShowAchievements(false); setShowGameMenu(false);
+    setStatsExpanded(false); setStoryExpanded(false); setSideTab("actions");
+    setMetroTrip(null); setActiveTravel(null); setTravelProgress(0);
     setViewMode("scene"); setPendingTravel(null); setTutorialStep(0);
     setJournal([`${profile.name} начинает путь «${selectedRoute.label}».`, "Ты прибыл в Париж. Всё только начинается."]);
     setPhase("game");
@@ -731,7 +909,7 @@ export default function Home() {
     setActionCount(savedGame.actionCount); setSeenEvents(savedGame.seenEvents); setMetNpcs(savedGame.metNpcs); setJournal(savedGame.journal);
     setDailyProgress(savedGame.dailyProgress ?? emptyDayProgress); setDailyRewardClaimed(savedGame.dailyRewardClaimed ?? false);
     setVisitedLocations(savedGame.visitedLocations ?? [savedGame.locationId]); setCompletedCityEvents(savedGame.completedCityEvents ?? []);
-    setAwake(true); setViewMode("scene"); setTutorialStep(-1); setPhase("game");
+    setAwake(true); setViewMode("scene"); setTutorialStep(-1); setSideTab("actions"); setPhase("game");
   };
 
   const startFresh = () => {
@@ -814,17 +992,49 @@ export default function Home() {
   const confirmTravel = (mode: TravelMode) => {
     if (!pendingTravel) return;
     const minutes = getTravelMinutes(currentLocation, pendingTravel, mode);
-    const effects = mode === "metro" ? { money: -2, energy: -2 } : mode === "bike" ? { money: -2, energy: -6 } : { energy: -9 };
-    const transport = mode === "metro" ? "Métro" : mode === "bike" ? "Vélib’" : "Пешком";
-    setLocationId(pendingTravel.id);
-    setVisitedLocations((items) => items.includes(pendingTravel.id) ? items : [...items, pendingTravel.id]);
-    setDailyProgress((progress) => ({ ...progress, travels: progress.travels + 1 }));
-    setTime((value) => value + minutes / 60);
-    setStats((current) => applyEffects(current, effects));
-    addJournal(`${formatTime(time)} · ${transport}: ${currentLocation.label} → ${pendingTravel.label}, около ${minutes} мин.`);
-    setToast(`${transport} · прибытие примерно в ${formatTime(time + minutes / 60)}`);
+    if (mode === "metro") {
+      const legs = buildMetroRoute(currentLocation.id, pendingTravel.id);
+      if (legs.length) {
+        setMetroTrip({ destination: pendingTravel, legs, minutes });
+        setMetroStep(0); setMetroStage("line"); setMetroSelectedLine("");
+        setMetroMessage(`Найдите платформу на станции ${metroStopByLocation[currentLocation.id]}.`);
+        setPendingTravel(null);
+        return;
+      }
+    }
+    setTravelProgress(8);
+    setActiveTravel({ mode, originId: currentLocation.id, destinationId: pendingTravel.id, minutes, legs: [] });
     setPendingTravel(null);
-    setViewMode("scene");
+  };
+
+  const chooseMetroLine = (lineId: string) => {
+    if (!metroTrip) return;
+    const leg = metroTrip.legs[metroStep];
+    if (lineId !== leg.lineId) {
+      setMetroMessage(`Линия ${lineId} не ведёт к следующей точке маршрута. Сверьтесь со схемой.`);
+      return;
+    }
+    setMetroSelectedLine(lineId);
+    setMetroStage("direction");
+    setMetroMessage(`Линия ${lineId} выбрана. Теперь найдите правильное направление.`);
+  };
+
+  const chooseMetroDirection = (direction: string) => {
+    if (!metroTrip) return;
+    const leg = metroTrip.legs[metroStep];
+    if (direction !== leg.direction) {
+      setMetroMessage(`Эта платформа увезёт в другую сторону. Ищите направление «${leg.direction}».`);
+      return;
+    }
+    if (metroStep >= metroTrip.legs.length - 1) {
+      setTravelProgress(8);
+      setActiveTravel({ mode: "metro", originId: currentLocation.id, destinationId: metroTrip.destination.id, minutes: metroTrip.minutes, legs: metroTrip.legs });
+      setMetroTrip(null); setMetroStep(0); setMetroStage("line"); setMetroSelectedLine("");
+      return;
+    }
+    const nextStep = metroStep + 1;
+    setMetroStep(nextStep); setMetroStage("line"); setMetroSelectedLine("");
+    setMetroMessage(`Вы вышли на ${leg.to}. Найдите пересадку на линию ${metroTrip.legs[nextStep].lineId}.`);
   };
 
   const nextTutorial = () => {
@@ -1076,7 +1286,7 @@ export default function Home() {
       <header className="game-header">
         <div className="brand-mini"><span className="mini-tower">A</span><div><strong>PARIS, NOUVELLE VIE</strong><small>{selectedRoute.subtitle}</small></div></div>
         <div className="time-block"><span>ГЛАВА {year}/5 · ДЕНЬ {day}</span><strong>{formatTime(time)}</strong><em>{sky === "night" ? "Ночь" : sky === "sunset" ? "Закат" : sky === "dawn" ? "Рассвет" : "День"}</em></div>
-        <div className="header-actions"><button className={viewMode === "map" ? "active" : ""} onClick={() => setViewMode(viewMode === "map" ? "scene" : "map")}>⌖ {viewMode === "map" ? "Вернуться в локацию" : "Карта Парижа"}</button><button onClick={() => { setTutorialStep(0); setViewMode("scene"); }}>? Обучение</button><button onClick={() => setShowAchievements(true)}>★ Ачивки <b>{unlockedAchievements.length}/{achievementDefs.length}</b></button><button onClick={() => setShowJournal(true)}>▤ Журнал</button><button onClick={exitToTitle}>Сохранить</button></div>
+        <div className="header-actions"><button className={viewMode === "map" ? "active" : ""} onClick={() => setViewMode(viewMode === "map" ? "scene" : "map")}>⌖ {viewMode === "map" ? "Вернуться" : "Карта"}</button><button onClick={() => setShowGameMenu(true)}>☰ Меню</button></div>
       </header>
 
       <div className="game-layout">
@@ -1085,10 +1295,8 @@ export default function Home() {
           <div className="stats-list">
             <StatMeter label="Силы" value={stats.energy} icon="♥" />
             <StatMeter label="Деньги" value={stats.money} icon="€" money />
-            <StatMeter label="Французский" value={stats.french} icon="FR" />
-            <StatMeter label="Досье" value={stats.admin} icon="▤" />
-            <StatMeter label="Интеграция" value={stats.assimilation} icon="◆" />
-            <StatMeter label="Опора" value={stats.stability} icon="⌂" />
+            <button className="stats-toggle" onClick={() => setStatsExpanded((value) => !value)}><span>Развитие персонажа</span><b>{statsExpanded ? "Свернуть −" : "Показать +"}</b></button>
+            {statsExpanded && <div className="secondary-stats"><StatMeter label="Французский" value={stats.french} icon="FR" /><StatMeter label="Досье" value={stats.admin} icon="▤" /><StatMeter label="Интеграция" value={stats.assimilation} icon="◆" /><StatMeter label="Опора" value={stats.stability} icon="⌂" /></div>}
           </div>
           <div className="daily-plan-card">
             <div className="daily-plan-head"><span>ПЛАН НА СЕГОДНЯ · ДЕНЬ {day}</span><b>{dailyTasks.filter((task) => dailyProgress[task.key] >= task.target).length}/{dailyTasks.length}</b></div>
@@ -1102,13 +1310,10 @@ export default function Home() {
             </div>
             <button className={`daily-reward ${allDailyTasksDone && !dailyRewardClaimed ? "ready" : ""}`} disabled={!allDailyTasksDone || dailyRewardClaimed} onClick={claimDailyReward}>{dailyRewardClaimed ? "✓ Награда получена" : "Награда: +60 € · +10 сил"}</button>
           </div>
-          <div className="chapter-progress-card">
-            <div><span>ПУТЬ К ГРАЖДАНСТВУ</span><b>Глава {year} из 5</b></div>
-            <strong>{goal.title}</strong>
-            <p>Язык, досье, интеграция и опора вместе открывают следующую сюжетную главу.</p>
+          <div className="chapter-progress-card compact">
+            <div><span>ГЛАВА {year}/5 · {goal.title}</span><b>{chapterProgress}%</b></div>
             <div className="chapter-progress-track"><span style={{ width: `${chapterProgress}%` }} /></div>
-            <small>Общий прогресс главы <b>{chapterProgress}%</b></small>
-            <button className={`year-button ${goalsMet ? "ready" : ""}`} disabled={!goalsMet} onClick={advanceYear}>{year === 5 ? "Подать заявление" : `Открыть главу ${year + 1}`} →</button>
+            {goalsMet && <button className="year-button ready" onClick={advanceYear}>{year === 5 ? "Подать заявление" : `Открыть главу ${year + 1}`} →</button>}
           </div>
         </aside>
 
@@ -1130,11 +1335,9 @@ export default function Home() {
           ) : (
             <div className="location-world">
               <LocationBackdrop location={currentLocation} sky={sky} />
-              <div className="chapter-banner">
-                <span>{chapter.episode}</span>
-                <h2>{chapter.title}</h2>
-                <p>{chapter.summary}</p>
-                <div><b>ТЕКУЩАЯ МИССИЯ</b><strong>{chapter.mission}</strong><small>Ставка: {chapter.stakes}</small></div>
+              <div className={`chapter-banner ${storyExpanded ? "expanded" : "collapsed"}`}>
+                <button className="chapter-toggle" onClick={() => setStoryExpanded((value) => !value)}><span><small>{chapter.episode}</small><strong>{chapter.title}</strong></span><b>{storyExpanded ? "Свернуть −" : "Сюжет +"}</b></button>
+                {storyExpanded && <div className="chapter-details"><p>{chapter.summary}</p><div><b>ТЕКУЩАЯ МИССИЯ</b><strong>{chapter.mission}</strong><small>Ставка: {chapter.stakes}</small></div></div>}
               </div>
               <button className="open-map-button" onClick={() => setViewMode("map")}><span>⌖</span><b>Открыть карту Парижа</b><small>Выбрать следующую локацию</small></button>
             </div>
@@ -1143,21 +1346,11 @@ export default function Home() {
 
         <aside className="right-panel pixel-panel">
           <div className="location-heading"><span>СЕЙЧАС ВЫ ЗДЕСЬ</span><h2>{currentLocation.label}</h2><p>{currentLocation.district}</p></div>
-          <div className="location-summary"><span>СЮЖЕТНАЯ ТОЧКА</span><p>{currentLocation.description}</p></div>
-          <div className={`city-event-card ${cityEventDone ? "completed" : ""}`}>
-            <div><span>{currentCityEvent.kicker}</span><b>{currentCityEvent.hours} ч.</b></div>
-            <h3>{currentCityEvent.title}</h3>
-            <p>{currentCityEvent.body}</p>
-            <small>⌖ {currentCityEventLocation.label} · {currentCityEventLocation.district}</small>
-            <button disabled={!awake || cityEventDone} onClick={participateCityEvent}>{cityEventDone ? "✓ Событие завершено" : locationId === currentCityEvent.locationId ? "Участвовать сейчас →" : "Показать место на карте →"}</button>
-          </div>
-          <div className="npc-card"><PixelPortrait npc={currentNpc} small /><div><span>{currentNpc.role}</span><strong>{currentNpc.name}</strong><p>«{currentNpc.line}»</p></div></div>
-          <button className="talk-button" disabled={!awake} onClick={talkToNpc}>Поговорить · 1 ч. {metNpcs.includes(currentNpc.id) ? "" : "· новое знакомство"}</button>
-          <div className="actions-title"><span>ЧТО ДЕЛАТЬ?</span><b>{awake ? `свободно около ${Math.max(0, Math.floor(24 - time))} ч.` : "сначала проснись"}</b></div>
-          <div className="action-list">
-            {currentLocation.actions.map((action) => <button key={action.id} disabled={!awake} onClick={() => performAction(action)}><span className="action-icon">{action.icon}</span><span><strong>{action.label}</strong><small>{action.detail} · {action.hours} ч.</small></span><b>›</b></button>)}
-          </div>
-          {awake && <button className="end-day" onClick={finishDay}>Завершить день · вернуться домой</button>}
+          <p className="location-one-line">{currentLocation.description}</p>
+          <div className="side-tabs" role="tablist" aria-label="Действия в локации"><button className={sideTab === "actions" ? "active" : ""} onClick={() => setSideTab("actions")}>Дела</button><button className={sideTab === "people" ? "active" : ""} onClick={() => setSideTab("people")}>Люди</button><button className={sideTab === "event" ? "active" : ""} onClick={() => setSideTab("event")}>Ивент <i>{cityEventDone ? "✓" : "1"}</i></button></div>
+          {sideTab === "actions" && <div className="side-tab-content"><div className="actions-title"><span>ДОСТУПНЫЕ ДЕЛА</span><b>{awake ? `≈ ${Math.max(0, Math.floor(24 - time))} ч. осталось` : "сначала проснись"}</b></div><div className="action-list">{currentLocation.actions.map((action) => <button key={action.id} disabled={!awake} onClick={() => performAction(action)}><span className="action-icon">{action.icon}</span><span><strong>{action.label}</strong><small>{action.detail} · {action.hours} ч.</small></span><b>›</b></button>)}</div>{awake && <button className="end-day" onClick={finishDay}>Завершить день · вернуться домой</button>}</div>}
+          {sideTab === "people" && <div className="side-tab-content people-tab"><div className="npc-card"><PixelPortrait npc={currentNpc} small /><div><span>{currentNpc.role}</span><strong>{currentNpc.name}</strong><p>«{currentNpc.line}»</p></div></div><button className="talk-button" disabled={!awake} onClick={talkToNpc}>Начать диалог · 1 ч. {metNpcs.includes(currentNpc.id) ? "" : "· новое знакомство"}</button><div className="people-progress"><span>Знакомства в Париже</span><b>{metNpcs.length}/{npcs.length}</b></div></div>}
+          {sideTab === "event" && <div className="side-tab-content"><div className={`city-event-card ${cityEventDone ? "completed" : ""}`}><div><span>{currentCityEvent.kicker}</span><b>{currentCityEvent.hours} ч.</b></div><h3>{currentCityEvent.title}</h3><p>{currentCityEvent.body}</p><small>⌖ {currentCityEventLocation.label} · {currentCityEventLocation.district}</small><button disabled={!awake || cityEventDone} onClick={participateCityEvent}>{cityEventDone ? "✓ Событие завершено" : locationId === currentCityEvent.locationId ? "Участвовать сейчас →" : "Показать место на карте →"}</button></div></div>}
         </aside>
       </div>
 
@@ -1177,6 +1370,39 @@ export default function Home() {
               <button onClick={() => confirmTravel("walk")}><span className="travel-icon">↟</span><strong>Пешком</strong><b>≈ {getTravelMinutes(currentLocation, pendingTravel, "walk")} мин</b><small>бесплатно · −9 сил</small></button>
             </div>
           </section>
+        </div>
+      )}
+
+      {metroTrip && currentMetroLeg && currentMetroLine && (
+        <div className="modal-backdrop metro-backdrop">
+          <section className="metro-simulator">
+            <button className="modal-close" onClick={() => setMetroTrip(null)}>×</button>
+            <header className="metro-sim-header"><div className="metro-mark">M</div><div><span>PARIS MÉTRO · НАВИГАЦИЯ</span><h2>{currentMetroLeg.from}</h2><p>Маршрут до {metroTrip.destination.label} · примерно {metroTrip.minutes} мин.</p></div></header>
+            <div className="metro-journey-strip">
+              {metroTrip.legs.map((leg, index) => { const line = metroLines[leg.lineId]; return <div className={`${index < metroStep ? "done" : index === metroStep ? "current" : ""}`} key={`${leg.lineId}-${leg.from}`}><i style={{ background: line.color, color: line.text }}>{line.id}</i><span><b>{leg.from}</b><small>{index < metroTrip.legs.length - 1 ? `Пересадка: ${leg.to}` : `Выход: ${leg.to}`}</small></span></div>; })}
+            </div>
+            <div className="metro-platform-board"><span>ÉTAPE {metroStep + 1}/{metroTrip.legs.length}</span><strong>{metroStage === "line" ? "На какую линию перейти?" : "В каком направлении ехать?"}</strong><p>{metroMessage}</p></div>
+            {metroStage === "line" ? <div className="metro-choice-grid line-choices">{metroLineOptions.map((line) => <button key={line.id} onClick={() => chooseMetroLine(line.id)}><i style={{ background: line.color, color: line.text }}>{line.id}</i><span><strong>{line.name}</strong><small>Платформа на станции {currentMetroLeg.from}</small></span><b>→</b></button>)}</div> : <div className="metro-choice-grid direction-choices">{[currentMetroLine.stations[0], currentMetroLine.stations[currentMetroLine.stations.length - 1]].map((direction) => <button key={direction} onClick={() => chooseMetroDirection(direction)}><i style={{ background: currentMetroLine.color, color: currentMetroLine.text }}>{metroSelectedLine}</i><span><strong>Direction {direction}</strong><small>{currentMetroLeg.stops} ост. до {currentMetroLeg.to}</small></span><b>→</b></button>)}</div>}
+            <div className="metro-map-key"><span><i className="metro-symbol transfer" /> correspondance = пересадка</span><span><i className="metro-symbol exit" /> sortie = выход</span><p>Ошибиться можно: игра подскажет, почему выбранная платформа не подходит.</p></div>
+          </section>
+        </div>
+      )}
+
+      {activeTravel && travelOrigin && travelDestination && (
+        <div className={`travel-loading-screen travel-${activeTravel.mode}`}>
+          <div className="travel-loading-sky"><i /><i /></div>
+          <div className="travel-motion-art" aria-hidden="true">
+            {activeTravel.mode === "metro" ? <div className="loading-metro"><span className="train-window" /><span className="train-window" /><span className="train-door" /><b>M</b></div> : activeTravel.mode === "bike" ? <div className="loading-bike"><i className="wheel one" /><i className="wheel two" /><span className="bike-frame" /><span className="rider" /></div> : <div className="loading-walker"><i className="walk-head" /><i className="walk-body" /><i className="walk-leg one" /><i className="walk-leg two" /></div>}
+          </div>
+          <section className="travel-loading-card">
+            <p>{activeTravel.mode === "metro" ? "EN ROUTE · MÉTRO" : activeTravel.mode === "bike" ? "EN ROUTE · VÉLIB’" : "EN ROUTE · À PIED"}</p>
+            <h2>{travelOrigin.label} <span>→</span> {travelDestination.label}</h2>
+            <strong>{travelProgress < 34 ? "Отправляемся…" : travelProgress < 67 ? activeTravel.mode === "metro" ? "Следим за станциями…" : "Париж движется вокруг…" : travelProgress < 88 ? "Уже почти на месте…" : "Прибываем…"}</strong>
+            {activeTravel.mode === "metro" && <div className="loading-metro-lines">{activeTravel.legs.map((leg) => <span key={`${leg.lineId}-${leg.from}`}><i style={{ background: metroLines[leg.lineId].color, color: metroLines[leg.lineId].text }}>{leg.lineId}</i>{leg.to}</span>)}</div>}
+            <div className="travel-loading-track"><span style={{ width: `${travelProgress}%` }} /></div>
+            <small>≈ {activeTravel.minutes} мин. игрового времени</small>
+          </section>
+          <div className="travel-ground" />
         </div>
       )}
 
@@ -1228,6 +1454,8 @@ export default function Home() {
           </section>
         </div>
       )}
+
+      {showGameMenu && <div className="modal-backdrop game-menu-backdrop"><section className="game-menu-modal"><button className="modal-close" onClick={() => setShowGameMenu(false)}>×</button><p className="eyebrow ink">ПАУЗА · ГЛАВА {year}/5</p><h2>Меню истории</h2><div className="game-menu-grid"><button onClick={() => { setShowGameMenu(false); setTutorialStep(0); setViewMode("scene"); }}><i>?</i><span><strong>Обучение</strong><small>Ещё раз показать основы</small></span></button><button onClick={() => { setShowGameMenu(false); setShowAchievements(true); }}><i>★</i><span><strong>Ачивки</strong><small>Открыто {unlockedAchievements.length} из {achievementDefs.length}</small></span></button><button onClick={() => { setShowGameMenu(false); setShowJournal(true); }}><i>▤</i><span><strong>Журнал</strong><small>Решения и события истории</small></span></button><button onClick={exitToTitle}><i>↥</i><span><strong>Сохранить и выйти</strong><small>Вернуться на титульный экран</small></span></button></div></section></div>}
 
       {showJournal && <div className="modal-backdrop"><section className="journal-modal"><button className="modal-close" onClick={() => setShowJournal(false)}>×</button><p className="eyebrow ink">CHRONIQUE</p><h2>Журнал {profile.name}</h2><div className="journal-list">{journal.map((entry, index) => <div key={`${entry}-${index}`}><span>{journal.length - index}</span><p>{entry}</p></div>)}</div></section></div>}
       {showAchievements && <div className="modal-backdrop achievement-backdrop"><section className="achievements-modal"><button className="modal-close" onClick={() => setShowAchievements(false)}>×</button><p className="eyebrow ink">COLLECTION · {unlockedAchievements.length}/{achievementDefs.length}</p><h2>Ачивки новой жизни</h2><p>Открываются сами, когда ты исследуешь город, знакомишься с людьми и развиваешь персонажа.</p><div className="achievement-grid">{achievementDefs.map((achievement) => { const value = Math.min(getAchievementProgress(achievement), achievement.target); const unlocked = value >= achievement.target; return <article className={unlocked ? "unlocked" : "locked"} key={achievement.id}><i>{unlocked ? achievement.icon : "?"}</i><div><span>{unlocked ? "ОТКРЫТО" : "ЕЩЁ НЕ ОТКРЫТО"}</span><h3>{achievement.title}</h3><p>{achievement.description}</p><div className="achievement-track"><b style={{ width: `${(value / achievement.target) * 100}%` }} /></div><small>{value}/{achievement.target}</small></div></article>; })}</div></section></div>}
