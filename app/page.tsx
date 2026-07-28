@@ -48,6 +48,16 @@ type LocationDef = {
   actions: Action[];
 };
 
+type TravelMode = "metro" | "bike" | "walk";
+
+type StoryChapter = {
+  episode: string;
+  title: string;
+  summary: string;
+  mission: string;
+  stakes: string;
+};
+
 type Npc = {
   id: string;
   name: string;
@@ -153,7 +163,7 @@ const npcs: Npc[] = [
 
 const locations: LocationDef[] = [
   {
-    id: "home", label: "Мансарда", short: "Дом", district: "11e arrondissement", x: "12%", y: "70%", art: "home", npc: "claire",
+    id: "home", label: "Мансарда", short: "Квартира · 11e", district: "11e arrondissement", x: "80%", y: "76%", art: "home", npc: "claire",
     description: "Крошечная квартира под крышей. Отсюда начинается каждый день.",
     actions: [
       { id: "sleep", label: "Отдохнуть", detail: "+38 сил", icon: "🛏", hours: 3, effects: { energy: 38 } },
@@ -162,7 +172,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "sorbonne", label: "Сорбонна", short: "Учёба", district: "Quartier latin", x: "54%", y: "67%", art: "university", npc: "ines",
+    id: "sorbonne", label: "Сорбонна", short: "Сорбонна · 5e", district: "Quartier latin", x: "56%", y: "79%", art: "university", npc: "ines",
     description: "Аудитории, библиотека и слишком быстрый французский преподавателей.",
     actions: [
       { id: "class", label: "Пойти на занятие", detail: "+8 язык", icon: "📖", hours: 3, effects: { energy: -16, french: 8, assimilation: 3 } },
@@ -171,7 +181,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "cafe", label: "Café des Amis", short: "Кафе", district: "Canal Saint-Martin", x: "31%", y: "38%", art: "cafe", npc: "malik",
+    id: "cafe", label: "Café des Amis", short: "Кафе · Canal", district: "Canal Saint-Martin", x: "76%", y: "27%", art: "cafe", npc: "malik",
     description: "Подработка, дешёвый эспрессо и разговоры, где никто не ждёт идеальной грамматики.",
     actions: [
       { id: "shift", label: "Выйти на смену", detail: "+68 € · −22 сил", icon: "☕", hours: 4, effects: { money: 68, energy: -22, french: 4, stability: 5 } },
@@ -180,7 +190,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "prefecture", label: "Префектура", short: "Досье", district: "Île de la Cité", x: "69%", y: "48%", art: "office", npc: "bernard",
+    id: "prefecture", label: "Префектура полиции", short: "Префектура · 4e", district: "Île de la Cité", x: "59%", y: "56%", art: "office", npc: "bernard",
     description: "Записи, копии, переводы и главный ресурс иммигранта — терпение.",
     actions: [
       { id: "appointment", label: "Прийти по записи", detail: "+10 досье", icon: "🗂", hours: 3, effects: { energy: -14, admin: 10, stability: 3 } },
@@ -189,7 +199,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "louvre", label: "Лувр", short: "Лувр", district: "1er arrondissement", x: "47%", y: "47%", art: "louvre", npc: "luc",
+    id: "louvre", label: "Лувр", short: "Лувр · 1er", district: "1er arrondissement", x: "43%", y: "47%", art: "louvre", npc: "luc",
     description: "Дворец, стеклянная пирамида и несколько тысяч лет культуры под одной крышей.",
     actions: [
       { id: "museum", label: "Исследовать зал", detail: "−17 € · +культура", icon: "◆", hours: 3, effects: { money: -17, energy: -9, french: 2, assimilation: 10 } },
@@ -197,7 +207,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "eiffel", label: "Эйфелева башня", short: "Башня", district: "Champ de Mars", x: "18%", y: "18%", art: "eiffel", npc: "thomas",
+    id: "eiffel", label: "Эйфелева башня", short: "Эйфелева башня · 7e", district: "Champ de Mars", x: "18%", y: "53%", art: "eiffel", npc: "thomas",
     description: "Железный ориентир новой жизни. Особенно красив, когда включается подсветка.",
     actions: [
       { id: "walk", label: "Гулять по набережной", detail: "+культура · +силы", icon: "🚶", hours: 3, effects: { energy: 4, assimilation: 7, stability: 3 } },
@@ -205,7 +215,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "montmartre", label: "Монмартр", short: "Холм", district: "18e arrondissement", x: "46%", y: "15%", art: "montmartre", npc: "yuki",
+    id: "montmartre", label: "Монмартр и Сакре-Кёр", short: "Монмартр · 18e", district: "18e arrondissement", x: "45%", y: "18%", art: "montmartre", npc: "yuki",
     description: "Лестницы, мастерские и белый купол Сакре-Кёр над крышами города.",
     actions: [
       { id: "pleinair", label: "Рисовать на площади", detail: "+22 € · +культура", icon: "🎨", hours: 3, effects: { money: 22, energy: -11, assimilation: 8, stability: 3 } },
@@ -213,7 +223,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "notredame", label: "Нотр-Дам", short: "Собор", district: "Île de la Cité", x: "79%", y: "73%", art: "notredame", npc: "amina",
+    id: "notredame", label: "Нотр-Дам де Пари", short: "Нотр-Дам · 4e", district: "Île de la Cité", x: "66%", y: "70%", art: "notredame", npc: "amina",
     description: "Готические башни, остров Сите и волонтёрский центр неподалёку.",
     actions: [
       { id: "volunteer", label: "Помочь волонтёрам", detail: "+10 культура", icon: "♡", hours: 4, effects: { energy: -18, french: 4, assimilation: 10, stability: 5 } },
@@ -281,6 +291,71 @@ const yearGoals = [
   { french: 72, admin: 65, assimilation: 72, stability: 65, title: "Натурализация" },
 ];
 
+const storyChapters: StoryChapter[] = [
+  {
+    episode: "ГЛАВА I · ПРИБЫТИЕ",
+    title: "Новый адрес",
+    summary: "Чемодан стоит посреди мансарды, французский звучит слишком быстро, а арендодатель ждёт документы.",
+    mission: "Закрепить жильё, познакомиться с соседом и собрать первое досье.",
+    stakes: "Без адреса не открыть счёт и не продлить ВНЖ.",
+  },
+  {
+    episode: "ГЛАВА II · ПЕРВЫЙ ГОД",
+    title: "Город отвечает",
+    summary: "Париж перестаёт быть открыткой. У тебя появляются любимое кафе, знакомые лица и первая серьёзная ошибка.",
+    mission: "Поднять французский, войти в местный круг и не потерять основание для проживания.",
+    stakes: "Изоляция замедлит учёбу, работу и продление документов.",
+  },
+  {
+    episode: "ГЛАВА III · ВЫБОР",
+    title: "Остаться надолго",
+    summary: "Временная жизнь становится настоящей. Теперь нужно выбрать между безопасностью и возможностью вырасти.",
+    mission: "Создать устойчивый доход и пройти ключевой поворот выбранного пути.",
+    stakes: "Один неудачный сезон может отбросить историю на год назад.",
+  },
+  {
+    episode: "ГЛАВА IV · СВОЯ СРЕДА",
+    title: "Больше не турист",
+    summary: "Ты знаешь, где пересесть без карты, споришь о районе и помогаешь новичкам не повторять твои ошибки.",
+    mission: "Укрепить связи, закрыть налоговые вопросы и подготовить сильное досье.",
+    stakes: "Натурализация оценивает не маршрут, а цельность твоей жизни во Франции.",
+  },
+  {
+    episode: "ГЛАВА V · РЕШЕНИЕ",
+    title: "Досье на гражданство",
+    summary: "Пять лет собраны в одну папку: адреса, дипломы, контракты, налоги, встречи и выборы.",
+    mission: "Достичь требований, подать заявление и пройти интервью на ассимиляцию.",
+    stakes: "Финал зависит от всего, что ты строил с первого дня.",
+  },
+];
+
+const tutorialSteps = [
+  {
+    kicker: "ОБУЧЕНИЕ · 1/4",
+    title: "У тебя есть история",
+    body: "Это не свободная песочница без цели. Каждый год — отдельная сюжетная глава. Выполняй миссию, принимай решения в событиях и готовься к гражданству.",
+    tip: "Сюжетная задача всегда видна в центре экрана.",
+  },
+  {
+    kicker: "ОБУЧЕНИЕ · 2/4",
+    title: "Париж теперь живой",
+    body: "После прибытия ты увидишь саму локацию: интерьер, улицу, посетителей и маленькие анимации. Персонажи вокруг продолжают жить, пока ты выбираешь действие.",
+    tip: "Сцена меняется вместе с районом и временем суток.",
+  },
+  {
+    kicker: "ОБУЧЕНИЕ · 3/4",
+    title: "Каждый выбор тратит время",
+    body: "Справа находятся крупные действия. Учёба, работа, отдых и разговоры меняют силы, деньги, язык, досье, интеграцию и устойчивость.",
+    tip: "Перед действием проверяй стоимость и длительность.",
+  },
+  {
+    kicker: "ОБУЧЕНИЕ · 4/4",
+    title: "Сначала построй маршрут",
+    body: "Карта показывает реальные названия районов и достопримечательностей. Нажми на место, сравни метро, велосипед и прогулку, затем подтверди поездку.",
+    tip: "Время в пути приблизительное и зависит от расстояния.",
+  },
+];
+
 const testQuestions = [
   { question: "Как звучит девиз Французской Республики?", answers: ["Liberté, Égalité, Fraternité", "Travail, Famille, Patrie", "Unité, Force, Honneur"], correct: 0 },
   { question: "Когда отмечается национальный праздник Франции?", answers: ["8 мая", "14 июля", "11 ноября"], correct: 1 },
@@ -312,7 +387,10 @@ function applyEffects(stats: Stats, effects: Partial<Stats>) {
 }
 
 function formatTime(time: number) {
-  return `${String(Math.floor(time)).padStart(2, "0")}:00`;
+  const totalMinutes = Math.round(time * 60);
+  const hours = Math.floor(totalMinutes / 60) % 24;
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
 function PixelPortrait({ npc, small = false, unknown = false }: { npc: Npc; small?: boolean; unknown?: boolean }) {
@@ -340,6 +418,41 @@ function LandmarkArt({ type }: { type: string }) {
       <span className="landmark-piece four" />
     </div>
   );
+}
+
+function LocationBackdrop({ location, sky }: { location: LocationDef; sky: string }) {
+  return (
+    <div className={`world-scene scene-${location.id} scene-time-${sky}`}>
+      <div className="world-sky"><i className="world-sun" /><i className="world-cloud cloud-a" /><i className="world-cloud cloud-b" /></div>
+      <div className="world-building">
+        <span className="set-piece set-one" /><span className="set-piece set-two" /><span className="set-piece set-three" /><span className="set-piece set-four" />
+      </div>
+      <div className="scene-landmark"><LandmarkArt type={location.art} /></div>
+      <div className="scene-furniture">
+        <span className="furniture table-one" /><span className="furniture table-two" /><span className="furniture bench" /><span className="furniture counter" />
+      </div>
+      <div className="crowd-person person-one"><i className="mini-head" /><i className="mini-body" /><i className="mini-arm" /><i className="mini-prop laptop" /></div>
+      <div className="crowd-person person-two"><i className="mini-head" /><i className="mini-body" /><i className="mini-arm" /><i className="mini-prop cup" /></div>
+      <div className="crowd-person person-three"><i className="mini-head" /><i className="mini-body" /><i className="mini-arm" /><i className="mini-prop book" /></div>
+      <div className="crowd-person person-four"><i className="mini-head" /><i className="mini-body" /><i className="mini-arm" /></div>
+      <div className="scene-atmosphere"><i /><i /><i /></div>
+      <div className="scene-label">
+        <span>{location.district}</span>
+        <h2>{location.label}</h2>
+        <p>{location.description}</p>
+      </div>
+    </div>
+  );
+}
+
+function getTravelMinutes(from: LocationDef, to: LocationDef, mode: TravelMode) {
+  const dx = parseFloat(from.x) - parseFloat(to.x);
+  const dy = parseFloat(from.y) - parseFloat(to.y);
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const metro = Math.max(15, Math.round((12 + distance * 0.42) / 5) * 5);
+  if (mode === "bike") return Math.max(15, Math.round((metro * 1.12) / 5) * 5);
+  if (mode === "walk") return Math.max(25, Math.round((metro * 2.15) / 5) * 5);
+  return metro;
 }
 
 function StatMeter({ label, value, icon, money = false }: { label: string; value: number; icon: string; money?: boolean }) {
@@ -378,11 +491,15 @@ export default function Home() {
   const [testIndex, setTestIndex] = useState(0);
   const [testScore, setTestScore] = useState(0);
   const [testFeedback, setTestFeedback] = useState("");
+  const [viewMode, setViewMode] = useState<"scene" | "map">("scene");
+  const [pendingTravel, setPendingTravel] = useState<LocationDef | null>(null);
+  const [tutorialStep, setTutorialStep] = useState(-1);
 
   const selectedRoute = routes.find((route) => route.id === routeId) ?? routes[0];
   const currentLocation = locations.find((location) => location.id === locationId) ?? locations[0];
   const currentNpc = npcs.find((npc) => npc.id === currentLocation.npc) ?? npcs[0];
   const goal = yearGoals[Math.min(year - 1, yearGoals.length - 1)];
+  const chapter = storyChapters[Math.min(year - 1, storyChapters.length - 1)];
   const goalsMet = stats.french >= goal.french && stats.admin >= goal.admin && stats.assimilation >= goal.assimilation && stats.stability >= goal.stability;
 
   const sky = useMemo(() => {
@@ -424,6 +541,7 @@ export default function Home() {
     setStats(selectedRoute.start);
     setYear(1); setDay(1); setTime(7); setLocationId("home"); setAwake(false);
     setActionCount(0); setSeenEvents([]); setMetNpcs([]);
+    setViewMode("scene"); setPendingTravel(null); setTutorialStep(0);
     setJournal([`${profile.name} начинает путь «${selectedRoute.label}».`, "Ты прибыл в Париж. Всё только начинается."]);
     setPhase("game");
   };
@@ -433,7 +551,7 @@ export default function Home() {
     setProfile(savedGame.profile); setRouteId(savedGame.routeId); setStats(savedGame.stats);
     setYear(savedGame.year); setDay(savedGame.day); setTime(savedGame.time); setLocationId(savedGame.locationId);
     setActionCount(savedGame.actionCount); setSeenEvents(savedGame.seenEvents); setMetNpcs(savedGame.metNpcs); setJournal(savedGame.journal);
-    setAwake(true); setPhase("game");
+    setAwake(true); setViewMode("scene"); setTutorialStep(-1); setPhase("game");
   };
 
   const startFresh = () => {
@@ -456,6 +574,7 @@ export default function Home() {
 
   const finishDay = () => {
     setDay((value) => value + 1); setTime(6); setAwake(false); setLocationId("home");
+    setViewMode("scene");
     setStats((current) => applyEffects(current, { energy: 18 }));
     addJournal(`День ${day} завершён. Париж затихает за окном.`);
   };
@@ -493,11 +612,36 @@ export default function Home() {
   };
 
   const travelTo = (id: string) => {
-    if (!awake || id === locationId) return;
+    if (!awake) return;
+    if (id === locationId) { setViewMode("scene"); return; }
     if (time >= 23) { setToast("Слишком поздно для поездки. Пора домой."); return; }
     const destination = locations.find((location) => location.id === id);
-    setLocationId(id); setTime((value) => value + 1); setStats((current) => applyEffects(current, { energy: -3 }));
-    if (destination) setToast(`Métro → ${destination.short} · 1 ч.`);
+    if (destination) setPendingTravel(destination);
+  };
+
+  const confirmTravel = (mode: TravelMode) => {
+    if (!pendingTravel) return;
+    const minutes = getTravelMinutes(currentLocation, pendingTravel, mode);
+    const effects = mode === "metro" ? { money: -2, energy: -2 } : mode === "bike" ? { money: -2, energy: -6 } : { energy: -9 };
+    const transport = mode === "metro" ? "Métro" : mode === "bike" ? "Vélib’" : "Пешком";
+    setLocationId(pendingTravel.id);
+    setTime((value) => value + minutes / 60);
+    setStats((current) => applyEffects(current, effects));
+    addJournal(`${formatTime(time)} · ${transport}: ${currentLocation.label} → ${pendingTravel.label}, около ${minutes} мин.`);
+    setToast(`${transport} · прибытие примерно в ${formatTime(time + minutes / 60)}`);
+    setPendingTravel(null);
+    setViewMode("scene");
+  };
+
+  const nextTutorial = () => {
+    if (tutorialStep >= 3) {
+      setTutorialStep(-1);
+      setViewMode("scene");
+      return;
+    }
+    const next = tutorialStep + 1;
+    setTutorialStep(next);
+    if (next === 3) setViewMode("map");
   };
 
   const talkToNpc = () => {
@@ -524,6 +668,7 @@ export default function Home() {
     }
     const nextYear = year + 1;
     setYear(nextYear); setDay((value) => value + 1); setTime(7); setAwake(false); setLocationId("home");
+    setViewMode("scene");
     setStats((current) => applyEffects(current, { energy: 22, money: 240, stability: 4 }));
     addJournal(`Год ${year} завершён. Начинается глава «${yearGoals[nextYear - 1].title}».`);
     setToast(`Год ${nextYear} · ${yearGoals[nextYear - 1].title}`);
@@ -674,7 +819,7 @@ export default function Home() {
       <header className="game-header">
         <div className="brand-mini"><span className="mini-tower">A</span><div><strong>PARIS, NOUVELLE VIE</strong><small>{selectedRoute.subtitle}</small></div></div>
         <div className="time-block"><span>ГОД {year} · ДЕНЬ {day}</span><strong>{formatTime(time)}</strong><em>{sky === "night" ? "Ночь" : sky === "sunset" ? "Закат" : sky === "dawn" ? "Рассвет" : "День"}</em></div>
-        <div className="header-actions"><button onClick={() => setShowJournal(true)}>▤ Журнал</button><button onClick={exitToTitle}>Сохранить и выйти</button></div>
+        <div className="header-actions"><button className={viewMode === "map" ? "active" : ""} onClick={() => setViewMode(viewMode === "map" ? "scene" : "map")}>⌖ {viewMode === "map" ? "Вернуться в локацию" : "Карта Парижа"}</button><button onClick={() => setShowJournal(true)}>▤ Журнал</button><button onClick={exitToTitle}>Сохранить</button></div>
       </header>
 
       <div className="game-layout">
@@ -699,25 +844,41 @@ export default function Home() {
           </div>
         </aside>
 
-        <section className="map-panel">
-          <div className="paris-sky"><div className="sun-or-moon" /><div className="sky-cloud c1" /><div className="sky-cloud c2" /></div>
-          <div className="map-name">PARIS <span>CARTE DE LA VILLE</span></div>
-          <div className="seine-map"><span>LA SEINE</span></div>
-          <div className="map-road road-one" /><div className="map-road road-two" /><div className="map-road road-three" />
-          {locations.map((location) => (
-            <button key={location.id} className={`map-location ${locationId === location.id ? "active" : ""}`} style={{ left: location.x, top: location.y }} onClick={() => travelTo(location.id)} aria-label={`Перейти: ${location.label}`}>
-              <LandmarkArt type={location.art} /><span>{location.short}</span>{locationId === location.id && <i className="you-pin">ВЫ</i>}
-            </button>
-          ))}
-          <div className="map-grain" />
+        <section className={`center-stage mode-${viewMode}`}>
+          {viewMode === "map" ? (
+            <div className="map-panel map-panel-v2">
+              <div className="map-topline"><div className="map-name">PARIS <span>КАРТА РАЙОНОВ И МАРШРУТОВ</span></div><button onClick={() => setViewMode("scene")}>× Закрыть карту</button></div>
+              <div className="arrondissement-ring ring-one" /><div className="arrondissement-ring ring-two" /><div className="arrondissement-ring ring-three" />
+              <div className="seine-map"><span>СЕНА · LA SEINE</span></div>
+              <div className="metro-line metro-red" /><div className="metro-line metro-blue" /><div className="metro-line metro-gold" />
+              {locations.map((location) => (
+                <button key={location.id} className={`map-location ${locationId === location.id ? "active" : ""}`} style={{ left: location.x, top: location.y }} onClick={() => travelTo(location.id)} aria-label={`Построить маршрут: ${location.label}`}>
+                  <LandmarkArt type={location.art} /><span>{location.short}</span>{locationId === location.id && <i className="you-pin">ВЫ ЗДЕСЬ</i>}
+                </button>
+              ))}
+              <div className="map-legend"><b>КАК ПОЛЬЗОВАТЬСЯ</b><span><i className="legend-dot red" /> линия 1</span><span><i className="legend-dot blue" /> линия 4</span><span><i className="legend-dot gold" /> RER</span><p>Выберите место — время и способ поездки появятся до подтверждения.</p></div>
+              <div className="map-grain" />
+            </div>
+          ) : (
+            <div className="location-world">
+              <LocationBackdrop location={currentLocation} sky={sky} />
+              <div className="chapter-banner">
+                <span>{chapter.episode}</span>
+                <h2>{chapter.title}</h2>
+                <p>{chapter.summary}</p>
+                <div><b>ТЕКУЩАЯ МИССИЯ</b><strong>{chapter.mission}</strong><small>Ставка: {chapter.stakes}</small></div>
+              </div>
+              <button className="open-map-button" onClick={() => setViewMode("map")}><span>⌖</span><b>Открыть карту Парижа</b><small>Выбрать следующую локацию</small></button>
+            </div>
+          )}
         </section>
 
         <aside className="right-panel pixel-panel">
           <div className="location-heading"><span>СЕЙЧАС ВЫ ЗДЕСЬ</span><h2>{currentLocation.label}</h2><p>{currentLocation.district}</p></div>
-          <div className="location-scene"><LandmarkArt type={currentLocation.art} /><div className="scene-copy"><p>{currentLocation.description}</p></div></div>
+          <div className="location-summary"><span>СЮЖЕТНАЯ ТОЧКА</span><p>{currentLocation.description}</p></div>
           <div className="npc-card"><PixelPortrait npc={currentNpc} small /><div><span>{currentNpc.role}</span><strong>{currentNpc.name}</strong><p>«{currentNpc.line}»</p></div></div>
           <button className="talk-button" disabled={!awake} onClick={talkToNpc}>Поговорить · 1 ч. {metNpcs.includes(currentNpc.id) ? "" : "· новое знакомство"}</button>
-          <div className="actions-title"><span>ЧТО ДЕЛАТЬ?</span><b>{awake ? `до полуночи ${24 - time} ч.` : "сначала проснись"}</b></div>
+          <div className="actions-title"><span>ЧТО ДЕЛАТЬ?</span><b>{awake ? `свободно около ${Math.max(0, Math.floor(24 - time))} ч.` : "сначала проснись"}</b></div>
           <div className="action-list">
             {currentLocation.actions.map((action) => <button key={action.id} disabled={!awake} onClick={() => performAction(action)}><span className="action-icon">{action.icon}</span><span><strong>{action.label}</strong><small>{action.detail} · {action.hours} ч.</small></span><b>›</b></button>)}
           </div>
@@ -725,9 +886,35 @@ export default function Home() {
         </aside>
       </div>
 
-      <footer className="game-footer"><span>Кликните по месту на карте, чтобы добраться на метро · поездка занимает 1 час</span><div>{npcs.map((npc) => <span key={npc.id} title={npc.name} className={metNpcs.includes(npc.id) ? "met" : ""}><PixelPortrait npc={npc} small unknown={!metNpcs.includes(npc.id)} /></span>)}</div></footer>
+      <footer className="game-footer"><span><b>{chapter.episode}</b> · решения в событиях меняют сюжет и финальные характеристики</span><div>{npcs.map((npc) => <span key={npc.id} title={npc.name} className={metNpcs.includes(npc.id) ? "met" : ""}><PixelPortrait npc={npc} small unknown={!metNpcs.includes(npc.id)} /></span>)}</div></footer>
 
-      {!awake && !activeEvent && (
+      {pendingTravel && (
+        <div className="modal-backdrop travel-backdrop">
+          <section className="travel-modal">
+            <button className="modal-close" onClick={() => setPendingTravel(null)}>×</button>
+            <p className="eyebrow ink">ПОДТВЕРЖДЕНИЕ МАРШРУТА</p>
+            <h2>{currentLocation.label} <span>→</span> {pendingTravel.label}</h2>
+            <p>Выберите способ передвижения. Указано приблизительное время без учёта забастовок, ремонта линий и парижского дождя.</p>
+            <div className="route-line"><i className="route-stop start" /><span /><i className="route-stop finish" /></div>
+            <div className="travel-options">
+              <button onClick={() => confirmTravel("metro")}><span className="travel-icon">M</span><strong>Метро</strong><b>≈ {getTravelMinutes(currentLocation, pendingTravel, "metro")} мин</b><small>−2 € · почти без усталости</small></button>
+              <button onClick={() => confirmTravel("bike")}><span className="travel-icon">V</span><strong>Vélib’</strong><b>≈ {getTravelMinutes(currentLocation, pendingTravel, "bike")} мин</b><small>−2 € · −6 сил</small></button>
+              <button onClick={() => confirmTravel("walk")}><span className="travel-icon">↟</span><strong>Пешком</strong><b>≈ {getTravelMinutes(currentLocation, pendingTravel, "walk")} мин</b><small>бесплатно · −9 сил</small></button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {tutorialStep >= 0 && (
+        <div className="modal-backdrop tutorial-backdrop">
+          <section className="tutorial-modal">
+            <div className="tutorial-visual"><div className={`tutorial-icon step-${tutorialStep}`}><i /><i /><i /></div><div className="tutorial-progress">{tutorialSteps.map((_, index) => <span key={index} className={index <= tutorialStep ? "active" : ""} />)}</div></div>
+            <div className="tutorial-copy"><button className="tutorial-skip" onClick={() => { setTutorialStep(-1); setViewMode("scene"); }}>Пропустить обучение</button><p className="eyebrow ink">{tutorialSteps[tutorialStep].kicker}</p><h2>{tutorialSteps[tutorialStep].title}</h2><p>{tutorialSteps[tutorialStep].body}</p><div className="tutorial-tip"><b>ПОДСКАЗКА</b>{tutorialSteps[tutorialStep].tip}</div><button className="pixel-button primary" onClick={nextTutorial}>{tutorialStep === 3 ? "Начать первый день" : "Дальше →"}</button></div>
+          </section>
+        </div>
+      )}
+
+      {!awake && !activeEvent && tutorialStep < 0 && !pendingTravel && (
         <div className="modal-backdrop morning-backdrop">
           <section className="morning-modal">
             <div className={`window-view sky-${sky}`}><div className="window-sun" /><div className="window-roofs" /><span>PARIS · ДЕНЬ {day}</span></div>

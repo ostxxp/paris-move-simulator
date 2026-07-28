@@ -44,8 +44,16 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(page, /Лувр/);
   assert.match(page, /testQuestions/);
   assert.match(page, /localStorage/);
+  assert.match(page, /tutorialSteps/);
+  assert.match(page, /storyChapters/);
+  assert.match(page, /LocationBackdrop/);
+  assert.match(page, /getTravelMinutes/);
+  assert.match(page, /confirmTravel/);
   assert.match(css, /pixel-portrait/);
   assert.match(css, /sky-sunset/);
+  assert.match(css, /world-scene/);
+  assert.match(css, /tutorial-modal/);
+  assert.match(css, /travel-modal/);
   assert.match(layout, /lang="ru"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 });
