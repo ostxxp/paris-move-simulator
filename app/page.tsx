@@ -819,7 +819,7 @@ export default function Home() {
       <header className="game-header">
         <div className="brand-mini"><span className="mini-tower">A</span><div><strong>PARIS, NOUVELLE VIE</strong><small>{selectedRoute.subtitle}</small></div></div>
         <div className="time-block"><span>ГОД {year} · ДЕНЬ {day}</span><strong>{formatTime(time)}</strong><em>{sky === "night" ? "Ночь" : sky === "sunset" ? "Закат" : sky === "dawn" ? "Рассвет" : "День"}</em></div>
-        <div className="header-actions"><button className={viewMode === "map" ? "active" : ""} onClick={() => setViewMode(viewMode === "map" ? "scene" : "map")}>⌖ {viewMode === "map" ? "Вернуться в локацию" : "Карта Парижа"}</button><button onClick={() => setShowJournal(true)}>▤ Журнал</button><button onClick={exitToTitle}>Сохранить</button></div>
+        <div className="header-actions"><button className={viewMode === "map" ? "active" : ""} onClick={() => setViewMode(viewMode === "map" ? "scene" : "map")}>⌖ {viewMode === "map" ? "Вернуться в локацию" : "Карта Парижа"}</button><button onClick={() => { setTutorialStep(0); setViewMode("scene"); }}>? Обучение</button><button onClick={() => setShowJournal(true)}>▤ Журнал</button><button onClick={exitToTitle}>Сохранить</button></div>
       </header>
 
       <div className="game-layout">
