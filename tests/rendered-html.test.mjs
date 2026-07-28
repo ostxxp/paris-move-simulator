@@ -16,16 +16,14 @@ async function render() {
   );
 }
 
-test("server-renders the finished Paris game shell", async () => {
+test("server-renders a translation-safe hydration shell", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   assert.match(html, /<title>Paris, Nouvelle Vie/);
-  assert.match(html, /PARIS,/);
-  assert.match(html, /NOUVELLE VIE/);
-  assert.match(html, /Новая история/);
+  assert.match(html, /class="boot-screen"/);
   assert.match(html, /translate="no"/);
   assert.match(html, /name="google" content="notranslate"/);
   assert.doesNotMatch(html, /codex-preview|Building your site|react-loading-skeleton/i);
@@ -40,6 +38,7 @@ test("keeps the requested gameplay systems in the product source", async () => {
   ]);
 
   assert.match(page, /Бакалавриат/);
+  assert.match(page, /СИМУЛЯТОР НОВОЙ ЖИЗНИ/);
   assert.match(page, /Паспорт талант/);
   assert.match(page, /Эйфелева башня/);
   assert.match(page, /Лувр/);

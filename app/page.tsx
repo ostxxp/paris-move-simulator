@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 type Phase = "intro" | "setup" | "route" | "game" | "test" | "ending";
 type Gender = "Женщина" | "Мужчина" | "Другое";
@@ -89,6 +89,9 @@ type SavedGame = {
 };
 
 const STORAGE_KEY = "paris-nouvelle-vie-save-v1";
+const subscribeToHydration = () => () => {};
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
 
 const routes: RouteDef[] = [
   {
@@ -349,6 +352,11 @@ function StatMeter({ label, value, icon, money = false }: { label: string; value
 }
 
 export default function Home() {
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
   const [phase, setPhase] = useState<Phase>("intro");
   const [profile, setProfile] = useState<Profile>(defaultProfile);
   const [routeId, setRouteId] = useState("licence");
@@ -541,6 +549,17 @@ export default function Home() {
     }
     setTestIndex((index) => index + 1); setTestFeedback("");
   };
+
+  if (!hydrated) {
+    return (
+      <main className="boot-screen" aria-hidden="true">
+        <div className="boot-sky"><i /><i /><i /></div>
+        <div className="boot-city"><span /><span /><span /><span /><span /></div>
+        <div className="boot-river" />
+        <div className="boot-frame"><span className="boot-tower" /><span className="boot-pulse" /></div>
+      </main>
+    );
+  }
 
   if (phase === "intro") {
     return (
