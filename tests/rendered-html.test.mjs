@@ -71,7 +71,10 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(page, /dialogueFollowUps/);
   assert.match(page, /relationships/);
   assert.match(page, /npcAssignments/);
-  assert.match(page, /Продолжить разговор/);
+  assert.match(page, /dialogue-auto-next/);
+  assert.match(page, /completedActionIds/);
+  assert.match(page, /dialoguePendingRelationship/);
+  assert.doesNotMatch(page, /Продолжить разговор/);
   assert.match(page, /metroSchematic/);
   assert.doesNotMatch(page, /РАЗГОВОР \{activeDialogueIndex \+ 1\} ИЗ/);
   assert.doesNotMatch(page, /type="range"/);

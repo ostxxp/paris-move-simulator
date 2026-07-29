@@ -34,6 +34,7 @@ type Action = {
   icon: string;
   hours: number;
   effects: Partial<Stats>;
+  repeatable?: boolean;
 };
 
 type LocationDef = {
@@ -108,6 +109,11 @@ type DialogueDef = {
 type DialogueRound = {
   prompt: string;
   choices: DialogueChoice[];
+};
+
+type DialogueLine = {
+  speaker: "player" | "npc";
+  text: string;
 };
 
 type DialogueMission = {
@@ -218,6 +224,7 @@ type SavedGame = {
   npcDialogueProgress?: Record<string, number>;
   relationships?: Record<string, number>;
   npcAssignments?: Record<string, NpcAssignment>;
+  completedActionIds?: string[];
 };
 
 const STORAGE_KEY = "paris-nouvelle-vie-save-v1";
@@ -298,8 +305,8 @@ const locations: LocationDef[] = [
     id: "sorbonne", label: "Сорбонна", short: "Сорбонна · 5e", district: "Quartier latin", x: "56%", y: "79%", art: "university", npc: "ines",
     description: "Аудитории, библиотека и слишком быстрый французский преподавателей.",
     actions: [
-      { id: "class", label: "Пойти на занятие", detail: "+8 язык", icon: "📖", hours: 3, effects: { energy: -16, french: 8, assimilation: 3 } },
-      { id: "library", label: "Засесть в библиотеке", detail: "+5 язык · +досье", icon: "📝", hours: 2, effects: { energy: -10, french: 5, admin: 2 } },
+      { id: "class", label: "Пойти на занятие", detail: "+8 язык", icon: "📖", hours: 3, effects: { energy: -16, french: 8, assimilation: 3 }, repeatable: true },
+      { id: "library", label: "Засесть в библиотеке", detail: "+5 язык · +досье", icon: "📝", hours: 2, effects: { energy: -10, french: 5, admin: 2 }, repeatable: true },
       { id: "exam", label: "Сдать модуль", detail: "+стабильность", icon: "✓", hours: 4, effects: { energy: -24, french: 6, stability: 9 } },
     ],
   },
@@ -307,9 +314,9 @@ const locations: LocationDef[] = [
     id: "cafe", label: "Café des Amis", short: "Кафе · Canal", district: "Canal Saint-Martin", x: "76%", y: "27%", art: "cafe", npc: "malik",
     description: "Подработка, дешёвый эспрессо и разговоры, где никто не ждёт идеальной грамматики.",
     actions: [
-      { id: "shift", label: "Выйти на смену", detail: "+68 € · −22 сил", icon: "☕", hours: 4, effects: { money: 68, energy: -22, french: 4, stability: 5 } },
-      { id: "espresso", label: "Выпить эспрессо", detail: "−4 € · +12 сил", icon: "◼", hours: 1, effects: { money: -4, energy: 12 } },
-      { id: "chat", label: "Болтать у стойки", detail: "+язык · +связи", icon: "💬", hours: 2, effects: { energy: -6, french: 4, assimilation: 7 } },
+      { id: "shift", label: "Выйти на смену", detail: "+68 € · −22 сил", icon: "☕", hours: 4, effects: { money: 68, energy: -22, french: 4, stability: 5 }, repeatable: true },
+      { id: "espresso", label: "Выпить эспрессо", detail: "−4 € · +12 сил", icon: "◼", hours: 1, effects: { money: -4, energy: 12 }, repeatable: true },
+      { id: "chat", label: "Болтать у стойки", detail: "+язык · +связи", icon: "💬", hours: 2, effects: { energy: -6, french: 4, assimilation: 7 }, repeatable: true },
     ],
   },
   {
@@ -325,32 +332,32 @@ const locations: LocationDef[] = [
     id: "louvre", label: "Лувр", short: "Лувр · 1er", district: "1er arrondissement", x: "43%", y: "47%", art: "louvre", npc: "luc",
     description: "Дворец, стеклянная пирамида и несколько тысяч лет культуры под одной крышей.",
     actions: [
-      { id: "museum", label: "Исследовать зал", detail: "−17 € · +культура", icon: "◆", hours: 3, effects: { money: -17, energy: -9, french: 2, assimilation: 10 } },
-      { id: "sketch", label: "Делать заметки", detail: "+язык · +культура", icon: "✎", hours: 2, effects: { energy: -7, french: 5, assimilation: 5 } },
+      { id: "museum", label: "Исследовать зал", detail: "−17 € · +культура", icon: "◆", hours: 3, effects: { money: -17, energy: -9, french: 2, assimilation: 10 }, repeatable: true },
+      { id: "sketch", label: "Делать заметки", detail: "+язык · +культура", icon: "✎", hours: 2, effects: { energy: -7, french: 5, assimilation: 5 }, repeatable: true },
     ],
   },
   {
     id: "eiffel", label: "Эйфелева башня", short: "Эйфелева башня · 7e", district: "Champ de Mars", x: "18%", y: "53%", art: "eiffel", npc: "thomas",
     description: "Железный ориентир новой жизни. Особенно красив, когда включается подсветка.",
     actions: [
-      { id: "walk", label: "Гулять по набережной", detail: "+культура · +силы", icon: "🚶", hours: 3, effects: { energy: 4, assimilation: 7, stability: 3 } },
-      { id: "network", label: "Встреча сообщества", detail: "+язык · +опора", icon: "🤝", hours: 3, effects: { energy: -10, french: 4, assimilation: 5, stability: 7 } },
+      { id: "walk", label: "Гулять по набережной", detail: "+культура · +силы", icon: "🚶", hours: 3, effects: { energy: 4, assimilation: 7, stability: 3 }, repeatable: true },
+      { id: "network", label: "Встреча сообщества", detail: "+язык · +опора", icon: "🤝", hours: 3, effects: { energy: -10, french: 4, assimilation: 5, stability: 7 }, repeatable: true },
     ],
   },
   {
     id: "montmartre", label: "Монмартр и Сакре-Кёр", short: "Монмартр · 18e", district: "18e arrondissement", x: "45%", y: "18%", art: "montmartre", npc: "yuki",
     description: "Лестницы, мастерские и белый купол Сакре-Кёр над крышами города.",
     actions: [
-      { id: "pleinair", label: "Рисовать на площади", detail: "+22 € · +культура", icon: "🎨", hours: 3, effects: { money: 22, energy: -11, assimilation: 8, stability: 3 } },
-      { id: "picnic", label: "Пикник на ступенях", detail: "−14 € · +силы", icon: "🥖", hours: 2, effects: { money: -14, energy: 18, assimilation: 5 } },
+      { id: "pleinair", label: "Рисовать на площади", detail: "+22 € · +культура", icon: "🎨", hours: 3, effects: { money: 22, energy: -11, assimilation: 8, stability: 3 }, repeatable: true },
+      { id: "picnic", label: "Пикник на ступенях", detail: "−14 € · +силы", icon: "🥖", hours: 2, effects: { money: -14, energy: 18, assimilation: 5 }, repeatable: true },
     ],
   },
   {
     id: "notredame", label: "Нотр-Дам де Пари", short: "Нотр-Дам · 4e", district: "Île de la Cité", x: "66%", y: "70%", art: "notredame", npc: "amina",
     description: "Готические башни, остров Сите и волонтёрский центр неподалёку.",
     actions: [
-      { id: "volunteer", label: "Помочь волонтёрам", detail: "+10 культура", icon: "♡", hours: 4, effects: { energy: -18, french: 4, assimilation: 10, stability: 5 } },
-      { id: "history", label: "Историческая прогулка", detail: "+язык · +культура", icon: "⌛", hours: 3, effects: { money: -8, energy: -8, french: 3, assimilation: 7 } },
+      { id: "volunteer", label: "Помочь волонтёрам", detail: "+10 культура", icon: "♡", hours: 4, effects: { energy: -18, french: 4, assimilation: 10, stability: 5 }, repeatable: true },
+      { id: "history", label: "Историческая прогулка", detail: "+язык · +культура", icon: "⌛", hours: 3, effects: { money: -8, energy: -8, french: 3, assimilation: 7 }, repeatable: true },
     ],
   },
 ];
@@ -830,6 +837,16 @@ function applyEffects(stats: Stats, effects: Partial<Stats>) {
   return clampStats(next);
 }
 
+function mergeEffectDeltas(...effects: Partial<Stats>[]) {
+  const result: Partial<Stats> = {};
+  effects.forEach((effect) => {
+    (Object.keys(effect) as StatKey[]).forEach((key) => {
+      result[key] = (result[key] ?? 0) + (effect[key] ?? 0);
+    });
+  });
+  return result;
+}
+
 function formatTime(time: number) {
   const totalMinutes = Math.round(time * 60);
   const hours = Math.floor(totalMinutes / 60) % 24;
@@ -994,18 +1011,33 @@ function getActivityKind(actionId: string): ActivityKind {
   return "community";
 }
 
-function getActivityStatus(kind: ActivityKind, progress: number) {
-  const copy: Record<ActivityKind, string[]> = {
-    home: ["Осматриваем квартиру…", "Раскладываем вещи…", "Дом становится своим…", "Готово"],
-    cafe: ["Открываем смену…", "Принимаем заказы…", "У стойки становится оживлённо…", "Смена закончена"],
-    study: ["Открываем конспект…", "Разбираем материал…", "Закрепляем главное…", "Занятие окончено"],
-    admin: ["Проверяем список…", "Сверяем документы…", "Ставим отметки…", "Документы приняты"],
-    culture: ["Входим в пространство…", "Смотрим внимательнее…", "Запоминаем детали…", "Впечатление осталось"],
-    walk: ["Выходим на улицу…", "Идём через квартал…", "Город меняется вокруг…", "Прогулка завершена"],
-    community: ["Собираемся вместе…", "Распределяем задачи…", "Помогаем команде…", "Общее дело сделано"],
-  };
+const activitySceneScripts: Record<string, { shot: string; copy: [string, string, string, string] }> = {
+  unpack: { shot: "МАНСАРДА · КОРОБКИ", copy: ["Снимаем ленту с первой коробки…", "Книги отправляются на полку…", "Лампа и фотографии находят своё место…", "Мансарда стала немного своей"] },
+  insurance: { shot: "МАНСАРДА · ОНЛАЙН-ФОРМА", copy: ["Сравниваем условия страховки…", "Вводим данные договора аренды…", "Подписываем форму и оплачиваем полис…", "Attestation d’assurance получена"] },
+  address: { shot: "МАНСАРДА · ДОСЬЕ", copy: ["Сверяем имя в договоре аренды…", "Прикладываем страховку жилья…", "Добавляем свежий счёт с адресом…", "Пакет подтверждения адреса готов"] },
+  class: { shot: "СОРБОННА · АУДИТОРИЯ", copy: ["Преподаватель начинает лекцию…", "Ловим знакомые слова в быстром французском…", "Обсуждаем пример с соседом по парте…", "Конспект заполнен, занятие окончено"] },
+  library: { shot: "СОРБОННА · БИБЛИОТЕКА", copy: ["Находим нужный раздел каталога…", "Собираем источники и словарь…", "Перепроверяем даты и формулировки…", "Заметки разложены по темам"] },
+  exam: { shot: "СОРБОННА · ЭКЗАМЕН", copy: ["Получаем билет и читаем вопросы…", "Пишем аргументы по-французски…", "Проверяем ответы перед сдачей…", "Модуль сдан преподавателю"] },
+  shift: { shot: "CAFÉ · ВЕЧЕРНЯЯ СМЕНА", copy: ["Малик открывает кассу, а ты ставишь чашки…", "Первый заказ: deux cafés allongés…", "Очередь растёт, столики заполняются…", "Последняя чашка вымыта, смена закрыта"] },
+  espresso: { shot: "CAFÉ · ПЯТЬ МИНУТ ТИШИНЫ", copy: ["Мелем зёрна для двойного эспрессо…", "Кофе медленно наполняет чашку…", "За окном проходит шумный автобус…", "Чашка пуста, силы вернулись"] },
+  chat: { shot: "CAFÉ · У СТОЙКИ", copy: ["Разговор начинается с погоды…", "Малик поправляет одно слово — без насмешки…", "К теме подключается постоянная гостья…", "Новая фраза остаётся в памяти"] },
+  appointment: { shot: "ПРЕФЕКТУРА · ОКНО 14", copy: ["Берём талон и следим за табло…", "Передаём папку сотруднику…", "Отвечаем на уточняющие вопросы…", "В досье появилась новая отметка"] },
+  copies: { shot: "ПРЕФЕКТУРА · КОПИ-ЦЕНТР", copy: ["Сортируем оригиналы и переводы…", "Аппарат сканирует страницу за страницей…", "Проверяем печати и читаемость…", "Заверенные копии убраны в папку"] },
+  taxes: { shot: "ПРЕФЕКТУРА · НАЛОГОВОЕ ОКНО", copy: ["Открываем налоговый кабинет…", "Сверяем доходы, адрес и номер fiscal…", "Исправляем найденное расхождение…", "Налоговая история подтверждена"] },
+  museum: { shot: "ЛУВР · ТИХИЙ ЗАЛ", copy: ["Оставляем маршрут туристических групп…", "Выбираем одну работу и остаёмся рядом…", "Замечаем детали, которые сначала ускользнули…", "Зал запомнился как личное открытие"] },
+  sketch: { shot: "ЛУВР · АЛЬБОМ", copy: ["Намечаем композицию несколькими линиями…", "Подписываем цвета по-французски…", "Добавляем заметку об истории работы…", "Страница альбома закончена"] },
+  walk: { shot: "НАБЕРЕЖНАЯ · ПРОГУЛКА", copy: ["Спускаемся к Сене…", "Проходим мимо букинистов и велосипедистов…", "Башня появляется между домами…", "Маршрут закончился у воды"] },
+  network: { shot: "CHAMP DE MARS · ВСТРЕЧА", copy: ["Участники собираются небольшими группами…", "Ты представляешься без заученной речи…", "Разговор переходит к работе и планам…", "В телефоне появилось новое знакомство"] },
+  pleinair: { shot: "МОНМАРТР · ПЛЕНЭР", copy: ["Ставим мольберт у края площади…", "Намечаем крыши и купол Сакре-Кёр…", "Прохожий останавливается посмотреть…", "Последний мазок подсыхает на ветру"] },
+  picnic: { shot: "МОНМАРТР · СТУПЕНИ", copy: ["Находим свободное место с видом на город…", "Делим багет и сыр…", "Музыкант начинает знакомую мелодию…", "Плед сложен, закат остаётся в памяти"] },
+  volunteer: { shot: "ОСТРОВ СИТЕ · ВОЛОНТЁРСКИЙ ЦЕНТР", copy: ["Амина знакомит тебя с командой…", "Сортируем коробки по адресам…", "Передаём пакеты людям у входа…", "Последняя коробка доставлена"] },
+  history: { shot: "НОТР-ДАМ · МАРШРУТ", copy: ["Гид разворачивает старую карту острова…", "Сравниваем фасад с архивной фотографией…", "Записываем названия архитектурных деталей…", "Прогулка заканчивается у набережной"] },
+};
+
+function getActivityScene(actionId: string, progress: number) {
+  const scene = activitySceneScripts[actionId] ?? { shot: "ПАРИЖ · ДЕЛО", copy: ["Начинаем…", "Продолжаем…", "Проверяем результат…", "Готово"] as [string, string, string, string] };
   const index = progress < 38 ? 0 : progress < 72 ? 1 : progress < 92 ? 2 : 3;
-  return copy[kind][index];
+  return { shot: scene.shot, status: scene.copy[index] };
 }
 
 function getMetroLinesAtStation(station: string) {
@@ -1132,6 +1164,10 @@ export default function Home() {
   const [dialogueStage, setDialogueStage] = useState<"intro" | "choice" | "result">("choice");
   const [activeDialogueIndex, setActiveDialogueIndex] = useState(0);
   const [dialogueRoundIndex, setDialogueRoundIndex] = useState(0);
+  const [dialogueTranscript, setDialogueTranscript] = useState<DialogueLine[]>([]);
+  const [dialoguePendingEffects, setDialoguePendingEffects] = useState<Partial<Stats>>({});
+  const [dialoguePendingRelationship, setDialoguePendingRelationship] = useState(0);
+  const [dialogueElapsedMinutes, setDialogueElapsedMinutes] = useState(0);
   const [npcDialogueProgress, setNpcDialogueProgress] = useState<Record<string, number>>({});
   const [relationships, setRelationships] = useState<Record<string, number>>({});
   const [npcAssignments, setNpcAssignments] = useState<Record<string, NpcAssignment>>({});
@@ -1151,6 +1187,7 @@ export default function Home() {
   const [actionProgress, setActionProgress] = useState(0);
   const [showEventReveal, setShowEventReveal] = useState(false);
   const [completedDailyTaskIds, setCompletedDailyTaskIds] = useState<string[]>([]);
+  const [completedActionIds, setCompletedActionIds] = useState<string[]>([]);
   const [chapterProgressPoints, setChapterProgressPoints] = useState(0);
   const [dayTransitionPhase, setDayTransitionPhase] = useState<"sunset" | "night" | "dawn" | null>(null);
   const [dayTransitionText, setDayTransitionText] = useState("");
@@ -1160,6 +1197,7 @@ export default function Home() {
   const currentNpc = npcs.find((npc) => npc.id === currentLocation.npc) ?? npcs[0];
   const currentNpcDialogueProgress = npcDialogueProgress[currentNpc.id] ?? 0;
   const currentNpcDialogueIndex = currentNpcDialogueProgress % getNpcDialogues(currentNpc.id).length;
+  const currentNpcDialogue = getNpcDialogues(currentNpc.id)[currentNpcDialogueIndex];
   const currentNpcMission = getDialogueMission(currentNpc.id, currentNpcDialogueIndex);
   const currentNpcRelationship = relationships[currentNpc.id] ?? 0;
   const activeDialogueDef = activeDialogue ? getNpcDialogues(activeDialogue.id)[activeDialogueIndex] : null;
@@ -1171,7 +1209,7 @@ export default function Home() {
   const chapter = storyChapters[Math.min(year - 1, storyChapters.length - 1)];
   const goalsMet = stats.french >= goal.french && stats.admin >= goal.admin && stats.assimilation >= goal.assimilation && stats.stability >= goal.stability;
   const dailyTasks = dailyTaskSets[(day - 1) % dailyTaskSets.length];
-  const isDailyTaskDone = (task: DailyTask) => completedDailyTaskIds.includes(task.id);
+  const isDailyTaskDone = (task: DailyTask) => completedDailyTaskIds.includes(task.id) || (task.trigger === "action" && completedActionIds.includes(task.targetId));
   const allDailyTasksDone = dailyTasks.every(isDailyTaskDone);
   const nextDailyTask = dailyTasks.find((task) => !isDailyTaskDone(task)) ?? null;
   const currentCityEvent = cityEvents[(day - 1) % cityEvents.length];
@@ -1186,6 +1224,7 @@ export default function Home() {
   const travelOrigin = activeTravel ? locations.find((location) => location.id === activeTravel.originId) ?? locations[0] : null;
   const travelDestination = activeTravel ? locations.find((location) => location.id === activeTravel.destinationId) ?? locations[0] : null;
   const activeActivityKind = activeAction ? getActivityKind(activeAction.action.id) : null;
+  const activeActivityScene = activeAction ? getActivityScene(activeAction.action.id, actionProgress) : null;
 
   const getAchievementProgress = (achievement: AchievementDef) => {
     if (achievement.kind === "npcs") return metNpcs.length;
@@ -1218,15 +1257,35 @@ export default function Home() {
 
   useEffect(() => {
     if (phase !== "game" || !profile.name) return;
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
-  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments]);
+  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments]);
 
   useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(""), 2800);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    if (!activeDialogue || dialogueStage !== "result") return;
+    const rounds = getDialogueRounds(activeDialogue.id, activeDialogueIndex);
+    if (dialogueRoundIndex >= rounds.length - 1) return;
+    const timeout = window.setTimeout(() => {
+      setDialogueRoundIndex((index) => index + 1);
+      setDialogueResult("");
+      setDialogueStage("choice");
+    }, 2900);
+    return () => window.clearTimeout(timeout);
+  }, [activeDialogue, activeDialogueIndex, dialogueRoundIndex, dialogueStage]);
+
+  useEffect(() => {
+    if (!activeDialogue || !activeDialogueMission || dialogueStage === "intro") return;
+    const timer = window.setInterval(() => {
+      setDialogueElapsedMinutes((minutes) => Math.min(activeDialogueMission.durationMinutes, minutes + 1));
+    }, 520);
+    return () => window.clearInterval(timer);
+  }, [activeDialogue, activeDialogueMission, dialogueStage]);
 
   useEffect(() => {
     const paused = phase !== "game" || !awake || !!activeTravel || !!activeAction || !!activeDialogue || !!activeEvent || !!pendingTravel || !!metroTrip || !!dayTransitionPhase || tutorialStep >= 0 || showEventReveal || showGameMenu || showJournal || showAchievements;
@@ -1279,8 +1338,8 @@ export default function Home() {
     setYear(1); setDay(1); setTime(7); setLocationId("home"); setAwake(false);
     setActionCount(0); setSeenEvents([]); setMetNpcs([]);
     setDailyProgress(emptyDayProgress); setDailyRewardClaimed(false); setVisitedLocations(["home"]); setCompletedCityEvents([]);
-    setCompletedDailyTaskIds([]); setChapterProgressPoints(0); setNpcDialogueProgress({}); setRelationships({}); setNpcAssignments({});
-    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setActiveDialogueIndex(0); setDialogueRoundIndex(0); setShowAchievements(false); setShowGameMenu(false);
+    setCompletedDailyTaskIds([]); setCompletedActionIds([]); setChapterProgressPoints(0); setNpcDialogueProgress({}); setRelationships({}); setNpcAssignments({});
+    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setActiveDialogueIndex(0); setDialogueRoundIndex(0); setDialogueTranscript([]); setDialoguePendingEffects({}); setDialoguePendingRelationship(0); setDialogueElapsedMinutes(0); setShowAchievements(false); setShowGameMenu(false);
     setStatsExpanded(false); setStoryExpanded(false); setSideTab("actions");
     setMetroTrip(null); setActiveTravel(null); setTravelProgress(0); setActiveAction(null); setActionProgress(0); setShowEventReveal(false); setDayTransitionPhase(null);
     setViewMode("scene"); setPendingTravel(null); setTutorialStep(0);
@@ -1295,7 +1354,7 @@ export default function Home() {
     setActionCount(savedGame.actionCount); setSeenEvents(savedGame.seenEvents); setMetNpcs(savedGame.metNpcs); setJournal(savedGame.journal);
     setDailyProgress(savedGame.dailyProgress ?? emptyDayProgress); setDailyRewardClaimed(savedGame.dailyRewardClaimed ?? false);
     setVisitedLocations(savedGame.visitedLocations ?? [savedGame.locationId]); setCompletedCityEvents(savedGame.completedCityEvents ?? []);
-    setCompletedDailyTaskIds(savedGame.completedDailyTaskIds ?? []); setChapterProgressPoints(savedGame.chapterProgressPoints ?? 0);
+    setCompletedDailyTaskIds(savedGame.completedDailyTaskIds ?? []); setCompletedActionIds(savedGame.completedActionIds ?? []); setChapterProgressPoints(savedGame.chapterProgressPoints ?? 0);
     setNpcDialogueProgress(savedGame.npcDialogueProgress ?? {}); setRelationships(savedGame.relationships ?? {}); setNpcAssignments(savedGame.npcAssignments ?? {});
     setAwake(true); setViewMode("scene"); setTutorialStep(-1); setSideTab("actions"); setActiveAction(null); setShowEventReveal(false); setPhase("game");
   };
@@ -1306,7 +1365,7 @@ export default function Home() {
   };
 
   const exitToTitle = () => {
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
     setSavedGame(save);
     setPhase("intro");
@@ -1350,6 +1409,10 @@ export default function Home() {
 
   const performAction = (action: Action) => {
     if (!awake || activeAction) return;
+    if (!action.repeatable && completedActionIds.includes(action.id)) {
+      setToast("Это сюжетное дело уже завершено — результат сохранён.");
+      return;
+    }
     if (stats.energy <= 5 && action.effects.energy && action.effects.energy < 1) {
       setToast("Сил почти нет. Отдохни или заверши день.");
       return;
@@ -1367,6 +1430,7 @@ export default function Home() {
       const nextCount = actionCount + 1;
       setStats((current) => applyEffects(current, action.effects));
       setActionCount(nextCount);
+      if (!action.repeatable) setCompletedActionIds((items) => items.includes(action.id) ? items : [...items, action.id]);
       setCompletedDailyTaskIds((items) => {
         const matches = dailyTasks.filter((task) => task.trigger === "action" && task.targetId === action.id && task.locationId === actionLocation.id).map((task) => task.id);
         return [...new Set([...items, ...matches])];
@@ -1464,63 +1528,72 @@ export default function Home() {
   };
 
   const talkToNpc = () => {
+    const index = currentNpcDialogueIndex;
     setActiveDialogue(currentNpc);
-    setActiveDialogueIndex(currentNpcDialogueIndex);
+    setActiveDialogueIndex(index);
     setDialogueRoundIndex(0);
     setDialogueResult("");
+    setDialogueTranscript([]);
+    setDialoguePendingEffects({});
+    setDialoguePendingRelationship(0);
+    setDialogueElapsedMinutes(0);
     setDialogueStage(metNpcs.includes(currentNpc.id) ? "choice" : "intro");
   };
 
   const chooseDialogue = (choice: DialogueChoice) => {
     if (!activeDialogue || !activeDialogueDef || !activeDialogueMission || !activeDialogueRound) return;
-    const firstMeeting = !metNpcs.includes(activeDialogue.id);
-    const finalRound = dialogueRoundIndex >= activeDialogueRounds.length - 1;
-    const baseEffects: Partial<Stats> = { energy: -1, french: firstMeeting ? 2 : 0, assimilation: firstMeeting ? 2 : 0 };
-    const combinedEffects: Partial<Stats> = {
-      ...baseEffects,
-      ...choice.effects,
-      energy: (baseEffects.energy ?? 0) + (choice.effects.energy ?? 0),
-      french: (baseEffects.french ?? 0) + (choice.effects.french ?? 0),
-      assimilation: (baseEffects.assimilation ?? 0) + (choice.effects.assimilation ?? 0),
-    };
-    if (firstMeeting) setMetNpcs((items) => [...items, activeDialogue.id]);
-    setStats((current) => applyEffects(current, combinedEffects));
-    setRelationships((values) => ({ ...values, [activeDialogue.id]: Math.min(100, (values[activeDialogue.id] ?? 0) + 4 + ((choice.effects.assimilation ?? 0) > 2 ? 1 : 0)) }));
-    setTime((value) => Math.min(23.95, value + Math.ceil(activeDialogueMission.durationMinutes / activeDialogueRounds.length) / 60));
+    setDialoguePendingEffects((effects) => mergeEffectDeltas(effects, choice.effects));
+    setDialoguePendingRelationship((value) => value + 3 + ((choice.effects.assimilation ?? 0) > 6 ? 1 : 0));
+    setDialogueTranscript((lines) => [...lines, { speaker: "player", text: choice.label }, { speaker: "npc", text: choice.response }]);
     setDialogueResult(choice.response);
     setDialogueStage("result");
-    if (finalRound) {
-      setCompletedDailyTaskIds((items) => {
-        const matches = dailyTasks.filter((task) => task.trigger === "talk" && task.targetId === activeDialogue.id && task.locationId === currentLocation.id).map((task) => task.id);
-        return [...new Set([...items, ...matches])];
-      });
-      setChapterProgressPoints((value) => Math.min(100, value + 5));
-      setDailyProgress((progress) => ({
-        ...progress,
-        talks: progress.talks + 1,
-        french: progress.french + ((combinedEffects.french ?? 0) > 0 ? 1 : 0),
-        admin: progress.admin + ((combinedEffects.admin ?? 0) > 0 ? 1 : 0),
-        culture: progress.culture + ((combinedEffects.assimilation ?? 0) > 0 ? 1 : 0),
-        earned: progress.earned + Math.max(0, combinedEffects.money ?? 0),
-      }));
-      setNpcDialogueProgress((progress) => ({ ...progress, [activeDialogue.id]: (progress[activeDialogue.id] ?? 0) + 1 }));
-      setNpcAssignments((assignments) => ({ ...assignments, [activeDialogue.id]: { missionId: activeDialogueMission.id, title: activeDialogueMission.title, task: activeDialogueMission.task, knowledge: activeDialogueMission.knowledge } }));
-      addJournal(`${activeDialogue.name} · ${activeDialogueMission.title}: ${activeDialogueMission.task}`);
-      setToast(firstMeeting ? `Новое знакомство: ${activeDialogue.name}` : `Новое личное поручение от ${activeDialogue.name}`);
-    }
   };
 
-  const continueDialogue = () => {
-    if (dialogueRoundIndex < activeDialogueRounds.length - 1) {
-      setDialogueRoundIndex((index) => index + 1);
-      setDialogueResult("");
-      setDialogueStage("choice");
-      return;
-    }
-    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setDialogueRoundIndex(0);
+  const resetDialogueSession = () => {
+    setActiveDialogue(null);
+    setDialogueResult("");
+    setDialogueStage("choice");
+    setDialogueRoundIndex(0);
+    setDialogueTranscript([]);
+    setDialoguePendingEffects({});
+    setDialoguePendingRelationship(0);
+    setDialogueElapsedMinutes(0);
   };
 
-  const closeDialogue = () => { setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setDialogueRoundIndex(0); };
+  const completeDialogue = () => {
+    if (!activeDialogue || !activeDialogueMission) return;
+    const npc = activeDialogue;
+    const mission = activeDialogueMission;
+    const firstMeeting = !metNpcs.includes(npc.id);
+    const combinedEffects = mergeEffectDeltas(dialoguePendingEffects, { energy: -3, french: firstMeeting ? 2 : 0, assimilation: firstMeeting ? 2 : 0 });
+    if (firstMeeting) setMetNpcs((items) => items.includes(npc.id) ? items : [...items, npc.id]);
+    setStats((current) => applyEffects(current, combinedEffects));
+    setRelationships((values) => ({ ...values, [npc.id]: Math.min(100, (values[npc.id] ?? 0) + dialoguePendingRelationship) }));
+    setTime((value) => Math.min(23.95, value + mission.durationMinutes / 60));
+    setCompletedDailyTaskIds((items) => {
+      const matches = dailyTasks.filter((task) => task.trigger === "talk" && task.targetId === npc.id && task.locationId === currentLocation.id).map((task) => task.id);
+      return [...new Set([...items, ...matches])];
+    });
+    setChapterProgressPoints((value) => Math.min(100, value + 5));
+    setDailyProgress((progress) => ({
+      ...progress,
+      talks: progress.talks + 1,
+      french: progress.french + ((combinedEffects.french ?? 0) > 0 ? 1 : 0),
+      admin: progress.admin + ((combinedEffects.admin ?? 0) > 0 ? 1 : 0),
+      culture: progress.culture + ((combinedEffects.assimilation ?? 0) > 0 ? 1 : 0),
+      earned: progress.earned + Math.max(0, combinedEffects.money ?? 0),
+    }));
+    setNpcDialogueProgress((progress) => ({ ...progress, [npc.id]: (progress[npc.id] ?? 0) + 1 }));
+    setNpcAssignments((assignments) => ({ ...assignments, [npc.id]: { missionId: mission.id, title: mission.title, task: mission.task, knowledge: mission.knowledge } }));
+    addJournal(`${npc.name} · ${mission.title}: ${mission.task}`);
+    setToast(firstMeeting ? `Новое знакомство: ${npc.name}` : `Разговор с ${npc.name} завершён — договорённость записана`);
+    resetDialogueSession();
+  };
+
+  const closeDialogue = () => {
+    if (dialoguePendingRelationship > 0) setToast("Незаконченный разговор прерван — отношения и награды не изменились.");
+    resetDialogueSession();
+  };
 
   const claimDailyReward = () => {
     if (!allDailyTasksDone || dailyRewardClaimed) return;
@@ -1816,12 +1889,16 @@ export default function Home() {
           <div className="location-heading"><span>СЕЙЧАС ВЫ ЗДЕСЬ</span><h2>{currentLocation.label}</h2><p>{currentLocation.district}</p></div>
           <p className="location-one-line">{currentLocation.description}</p>
           <div className="side-tabs" role="tablist" aria-label="Действия в локации"><button className={sideTab === "actions" ? "active" : ""} onClick={() => setSideTab("actions")}>Дела</button><button className={sideTab === "people" ? "active" : ""} onClick={() => setSideTab("people")}>Люди</button><button className={sideTab === "event" ? "active" : ""} onClick={() => setSideTab("event")}>Ивент <i>{cityEventDone ? "✓" : "1"}</i></button></div>
-          {sideTab === "actions" && <div className="side-tab-content"><div className="actions-title"><span>ДОСТУПНЫЕ ДЕЛА</span><b>{awake ? `≈ ${Math.max(0, Math.floor(24 - time))} ч. осталось` : "сначала проснись"}</b></div><div className="action-list">{currentLocation.actions.map((action) => <button className={nextDailyTask?.trigger === "action" && nextDailyTask.targetId === action.id && nextDailyTask.locationId === currentLocation.id ? "quest-action" : ""} key={action.id} disabled={!awake} onClick={() => performAction(action)}><span className="action-icon">{action.icon}</span><span><strong>{action.label}</strong><small>{action.detail} · {action.hours} ч.</small></span><b>›</b></button>)}</div>{awake && <button className="end-day" onClick={finishDay}>Завершить день · вернуться домой</button>}</div>}
+          {sideTab === "actions" && <div className="side-tab-content"><div className="actions-title"><span>ДОСТУПНЫЕ ДЕЛА</span><b>{awake ? `≈ ${Math.max(0, Math.floor(24 - time))} ч. осталось` : "сначала проснись"}</b></div><div className="action-list">{currentLocation.actions.map((action) => {
+            const completed = !action.repeatable && completedActionIds.includes(action.id);
+            const guided = nextDailyTask?.trigger === "action" && nextDailyTask.targetId === action.id && nextDailyTask.locationId === currentLocation.id;
+            return <button className={`${guided ? "quest-action" : ""} ${completed ? "completed-action" : ""}`} key={action.id} disabled={!awake || completed} onClick={() => performAction(action)}><span className="action-icon">{completed ? "✓" : action.icon}</span><span><strong>{action.label}</strong><small>{completed ? "Завершено · результат сохранён" : `${action.detail} · ${action.hours} ч. · ${action.repeatable ? "можно повторять" : "один раз"}`}</small></span><b>{completed ? "✓" : "›"}</b></button>;
+          })}</div>{awake && <button className="end-day" onClick={finishDay}>Завершить день · вернуться домой</button>}</div>}
           {sideTab === "people" && <div className="side-tab-content people-tab">
             <div className="npc-card"><PixelPortrait npc={currentNpc} small /><div><span>{currentNpc.role}</span><strong>{currentNpc.name}</strong><p>{metNpcs.includes(currentNpc.id) ? `«${currentNpc.line}»` : "Вы ещё не знакомы. Первый разговор начнётся с представления."}</p></div></div>
             <div className="relationship-card"><div><span>ОТНОШЕНИЯ</span><b>{getRelationshipTitle(currentNpcRelationship)}</b><strong>{currentNpcRelationship}%</strong></div><div className="relationship-track"><i style={{ width: `${currentNpcRelationship}%` }} /></div></div>
-            <div className="conversation-preview"><span>{currentNpcMission.kind}</span><strong>{currentNpcMission.title}</strong><p>{currentNpcMission.goal}</p><small>Длительный разгов · около {currentNpcMission.durationMinutes} мин.</small></div>
-            <button className="talk-button" disabled={!awake} onClick={talkToNpc}>{metNpcs.includes(currentNpc.id) ? "Обсудить: " : "Представиться и начать: "}{currentNpcMission.title} →</button>
+            <div className="conversation-preview"><span>СЛЕДУЮЩАЯ ТЕМА</span><strong>{currentNpcMission.title}</strong><p>«{currentNpcDialogue.greeting}»</p><small>Живой разговор · около {currentNpcMission.durationMinutes} мин.</small></div>
+            <button className="talk-button" disabled={!awake} onClick={talkToNpc}>{metNpcs.includes(currentNpc.id) ? `Поговорить с ${currentNpc.name}` : `Представиться ${currentNpc.name}`} →</button>
             {npcAssignments[currentNpc.id] && <div className="npc-assignment"><span>ЛИЧНОЕ ПОРУЧЕНИЕ</span><strong>{npcAssignments[currentNpc.id].title}</strong><p>{npcAssignments[currentNpc.id].task}</p></div>}
           </div>}
           {sideTab === "event" && <div className="side-tab-content"><div className={`city-event-card ${cityEventDone ? "completed" : ""}`}><div><span>{currentCityEvent.kicker}</span><b>{currentCityEvent.hours} ч.</b></div><h3>{currentCityEvent.title}</h3><p>{currentCityEvent.body}</p><small>⌖ {currentCityEventLocation.label} · {currentCityEventLocation.district}</small><button disabled={!awake || cityEventDone} onClick={participateCityEvent}>{cityEventDone ? "✓ Событие завершено" : locationId === currentCityEvent.locationId ? "Участвовать сейчас →" : "Показать место на карте →"}</button></div></div>}
@@ -1879,10 +1956,10 @@ export default function Home() {
         </div>
       )}
 
-      {activeAction && activeActivityKind && (
+      {activeAction && activeActivityKind && activeActivityScene && (
         <div className="action-transition-screen">
-          <div className={`activity-stage activity-${activeActivityKind}`}><div className="activity-backdrop"><i className="set-a" /><i className="set-b" /><i className="set-c" /></div><div className="activity-person main"><i className="act-head" /><i className="act-body" /><i className="act-arm" /><i className="act-leg left" /><i className="act-leg right" /></div><div className="activity-person second"><i className="act-head" /><i className="act-body" /><i className="act-arm" /><i className="act-leg left" /><i className="act-leg right" /></div><div className="activity-prop"><i /><i /><i /></div></div>
-          <section><p>ВЫПОЛНЯЕТСЯ · {locations.find((location) => location.id === activeAction.locationId)?.short}</p><h2>{activeAction.action.label}</h2><strong>{getActivityStatus(activeActivityKind, actionProgress)}</strong><div className="action-progress-track"><span style={{ width: `${actionProgress}%` }} /></div><small>Игровое время: {formatTime(activeAction.startTime)} → {formatTime(activeAction.startTime + activeAction.action.hours)}</small></section>
+          <div className={`activity-stage activity-${activeActivityKind} action-${activeAction.action.id}`}><div className="activity-shot-label"><span>8-BIT CUT SCENE</span><b>{activeActivityScene.shot}</b></div><div className="activity-backdrop"><i className="set-a" /><i className="set-b" /><i className="set-c" /></div><div className="activity-person main"><i className="act-head" /><i className="act-body" /><i className="act-arm" /><i className="act-leg left" /><i className="act-leg right" /></div><div className="activity-person second"><i className="act-head" /><i className="act-body" /><i className="act-arm" /><i className="act-leg left" /><i className="act-leg right" /></div><div className="activity-prop"><i /><i /><i /></div><div className="activity-cutscene-props"><i className="prop-one" /><i className="prop-two" /><i className="prop-three" /><i className="prop-four" /></div></div>
+          <section><p>ВЫПОЛНЯЕТСЯ · {locations.find((location) => location.id === activeAction.locationId)?.short}</p><h2>{activeAction.action.label}</h2><strong>{activeActivityScene.status}</strong><div className="action-progress-track"><span style={{ width: `${actionProgress}%` }} /></div><small>Игровое время: {formatTime(activeAction.startTime)} → {formatTime(activeAction.startTime + activeAction.action.hours)}</small></section>
         </div>
       )}
 
@@ -1908,13 +1985,12 @@ export default function Home() {
         <div className="modal-backdrop dialogue-backdrop">
           <section className="dialogue-modal">
             <button className="modal-close" onClick={closeDialogue}>×</button>
-            <div className="dialogue-speaker"><PixelPortrait npc={activeDialogue} /><span>{activeDialogue.role}</span><h2>{activeDialogue.name}</h2><small>{currentLocation.label}</small><div className="speaker-relationship"><span>{getRelationshipTitle(activeDialogueRelationship)}</span><i><b style={{ width: `${activeDialogueRelationship}%` }} /></i><strong>{activeDialogueRelationship}%</strong></div></div>
+            <div className="dialogue-speaker"><PixelPortrait npc={activeDialogue} /><span>{activeDialogue.role}</span><h2>{activeDialogue.name}</h2><small>{currentLocation.label}</small><div className="speaker-relationship"><span>{getRelationshipTitle(activeDialogueRelationship)}</span><i><b style={{ width: `${activeDialogueRelationship}%` }} /></i><strong>{activeDialogueRelationship}%{dialoguePendingRelationship > 0 && <em> +{dialoguePendingRelationship} после разговора</em>}</strong></div></div>
             <div className="dialogue-content">
-              <p className="eyebrow ink">{dialogueStage === "intro" ? "НОВОЕ ЗНАКОМСТВО" : `${activeDialogueMission.kind} · ОКОЛО ${activeDialogueMission.durationMinutes} МИНУТ`}</p>
-              <div className="conversation-mission"><span>{activeDialogueMission.kind}</span><strong>{activeDialogueMission.title}</strong><p><b>Цель:</b> {activeDialogueMission.goal}</p></div>
-              {dialogueStage === "intro" && <><div className="character-introduction"><span>КТО ЭТО?</span><p>{activeDialogueDef.intro}</p></div><button className="pixel-button primary" onClick={() => setDialogueStage("choice")}>Поздороваться и представиться →</button></>}
-              {dialogueStage === "choice" && <><div className="conversation-flow">{activeDialogueRounds.map((_, index) => <i key={index} className={index <= dialogueRoundIndex ? "active" : ""} />)}<span>разговор развивается</span></div><blockquote>«{activeDialogueRound.prompt}»</blockquote><div className="dialogue-choices">{activeDialogueRound.choices.map((choice) => <button key={choice.label} onClick={() => chooseDialogue(choice)}><span>Ответить:</span><strong>«{choice.label}»</strong><b>→</b></button>)}</div></>}
-              {dialogueStage === "result" && <><blockquote>«{dialogueResult}»</blockquote>{dialogueRoundIndex >= activeDialogueRounds.length - 1 ? <div className="dialogue-assignment-reveal"><span>ЗАПИСАНО В ЖУРНАЛ</span><strong>{activeDialogueMission.task}</strong><small><b>Вы разузнали:</b> {activeDialogueMission.knowledge}</small></div> : <div className="dialogue-time-note">Разговор продолжается · время идёт постепенно</div>}<button className="pixel-button primary" onClick={continueDialogue}>{dialogueRoundIndex >= activeDialogueRounds.length - 1 ? "Записать поручение и продолжить день →" : "Продолжить разговор →"}</button></>}
+              <p className="eyebrow ink">{dialogueStage === "intro" ? "НОВОЕ ЗНАКОМСТВО" : `РАЗГОВОР · ${formatTime(time + dialogueElapsedMinutes / 60)} · ПРОШЛО ${dialogueElapsedMinutes} МИН.`}</p>
+              {dialogueStage === "intro" && <><div className="character-introduction"><span>КТО ЭТО?</span><p>{activeDialogueDef.intro}</p></div><div className="conversation-context"><span>О чём заходит речь</span><strong>{activeDialogueMission.title}</strong><p>{activeDialogueMission.goal}</p></div><button className="pixel-button primary" onClick={() => setDialogueStage("choice")}>Поздороваться и представиться →</button></>}
+              {dialogueStage === "choice" && <div className="dialogue-turn dialogue-turn-in"><div className="conversation-flow">{activeDialogueRounds.map((_, index) => <i key={index} className={index <= dialogueRoundIndex ? "active" : ""} />)}<span>тема: {activeDialogueMission.title}</span></div>{dialogueTranscript.length > 0 && <div className="dialogue-transcript">{dialogueTranscript.slice(-4).map((line, index) => <p className={line.speaker} key={`${line.speaker}-${index}-${line.text}`}><span>{line.speaker === "player" ? profile.name : activeDialogue.name}</span>{line.text}</p>)}</div>}<blockquote>«{activeDialogueRound.prompt}»</blockquote><div className="dialogue-choices">{activeDialogueRound.choices.map((choice) => <button key={choice.label} onClick={() => chooseDialogue(choice)}><strong>«{choice.label}»</strong><b>→</b></button>)}</div></div>}
+              {dialogueStage === "result" && <div className="dialogue-turn dialogue-response-in"><div className="dialogue-answer-name">{activeDialogue.name}</div><blockquote>«{dialogueResult}»</blockquote>{dialogueRoundIndex >= activeDialogueRounds.length - 1 ? <><div className="dialogue-assignment-reveal"><span>ВЫ ДОГОВОРИЛИСЬ</span><strong>{activeDialogueMission.task}</strong><small><b>Что стало понятнее:</b> {activeDialogueMission.knowledge}</small></div><div className="dialogue-reward-note">Отношения, время и результаты будут засчитаны после завершения сцены.</div><button className="pixel-button primary" onClick={completeDialogue}>Завершить разговор и записать договорённость →</button></> : <div className="dialogue-auto-next"><span>Следующая реплика появится сама</span><i /></div>}</div>}
             </div>
           </section>
         </div>
