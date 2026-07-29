@@ -139,6 +139,9 @@ type CityEvent = {
   title: string;
   body: string;
   locationId: string;
+  period: "morning" | "day" | "evening";
+  startHour: number;
+  endHour: number;
   hours: number;
   effects: Partial<Stats>;
 };
@@ -210,6 +213,23 @@ type Npc = {
   hair: string;
   accessory: "glasses" | "moustache" | "beret" | "scarf" | "none";
   line: string;
+};
+
+type PortraitPreset = {
+  skin: string;
+  shadow: string;
+  accent: string;
+  hairStyle: "crop" | "bob" | "curls" | "side" | "bun" | "waves";
+  face: "round" | "long" | "square";
+};
+
+type AmbientProp = "none" | "laptop" | "cup" | "book" | "phone" | "folder" | "bag" | "camera" | "sketch";
+type AmbientPose = "standing" | "seated" | "leaning" | "walking" | "queue";
+type AmbientPersonDef = {
+  prop: AmbientProp;
+  pose: AmbientPose;
+  scale?: number;
+  depth?: number;
 };
 
 type StoryChoice = {
@@ -315,6 +335,51 @@ const npcs: Npc[] = [
   { id: "amina", name: "Амина", role: "волонтёр", color: "#d66b3c", hair: "#2d201b", accessory: "none", line: "Город становится своим, когда ты начинаешь делать что-то для других." },
   { id: "thomas", name: "Тома", role: "рекрутер", color: "#477c9d", hair: "#b57a42", accessory: "beret", line: "Во Франции важен не только CV. Расскажи, зачем тебе именно эта работа." },
 ];
+
+const portraitPresets: Record<string, PortraitPreset> = {
+  claire: { skin: "#e2aa82", shadow: "#c98268", accent: "#f0cf85", hairStyle: "bob", face: "round" },
+  malik: { skin: "#a96f50", shadow: "#7f4b3e", accent: "#e5bc5f", hairStyle: "curls", face: "square" },
+  ines: { skin: "#c98b68", shadow: "#9f644f", accent: "#d7b9ed", hairStyle: "waves", face: "long" },
+  bernard: { skin: "#dfb08c", shadow: "#bb816a", accent: "#d9d2bf", hairStyle: "side", face: "square" },
+  yuki: { skin: "#e0ad82", shadow: "#b7775f", accent: "#e15f62", hairStyle: "bob", face: "round" },
+  luc: { skin: "#e4b18a", shadow: "#bd7a61", accent: "#7db7c2", hairStyle: "curls", face: "long" },
+  amina: { skin: "#895139", shadow: "#65392f", accent: "#f0b34e", hairStyle: "bun", face: "round" },
+  thomas: { skin: "#d19a72", shadow: "#a46750", accent: "#e8d49a", hairStyle: "side", face: "square" },
+  lea: { skin: "#e2ae89", shadow: "#ba795f", accent: "#d9a4c9", hairStyle: "waves", face: "long" },
+  hugo: { skin: "#d1956d", shadow: "#a8644e", accent: "#e2a64c", hairStyle: "crop", face: "square" },
+  mireille: { skin: "#e1b18d", shadow: "#bb8067", accent: "#d9d2bd", hairStyle: "bob", face: "round" },
+  sami: { skin: "#9f684c", shadow: "#784436", accent: "#7291d8", hairStyle: "curls", face: "long" },
+  camille: { skin: "#dfaa82", shadow: "#b8755e", accent: "#e5c35d", hairStyle: "bun", face: "long" },
+  nora: { skin: "#b97958", shadow: "#8c503f", accent: "#8bc08a", hairStyle: "waves", face: "round" },
+  etienne: { skin: "#d6a079", shadow: "#aa6852", accent: "#ae91c7", hairStyle: "side", face: "square" },
+  fatou: { skin: "#7d4935", shadow: "#5c3229", accent: "#e28a61", hairStyle: "bun", face: "round" },
+};
+
+const ambientLooks = [
+  { skin: "#e4ad85", shadow: "#bd775e", hair: "#3d2926", coat: "#44789a", accent: "#e5bf61" },
+  { skin: "#9c6249", shadow: "#754033", hair: "#171a20", coat: "#b74750", accent: "#73b49a" },
+  { skin: "#d39069", shadow: "#a75f4d", hair: "#71462f", coat: "#d6a13d", accent: "#f1e0bd" },
+  { skin: "#75442f", shadow: "#543027", hair: "#221b1b", coat: "#3f806c", accent: "#e79a55" },
+  { skin: "#e6ba99", shadow: "#c2836c", hair: "#d2c9b8", coat: "#735f9e", accent: "#80b5c0" },
+  { skin: "#bd7b59", shadow: "#8e4e3f", hair: "#2d2020", coat: "#cb6b45", accent: "#e1c461" },
+  { skin: "#d9a47f", shadow: "#ad6d57", hair: "#1c2530", coat: "#5670bd", accent: "#dc8bb1" },
+  { skin: "#8c563e", shadow: "#66382e", hair: "#4b2c25", coat: "#718d4e", accent: "#e8d69e" },
+  { skin: "#efc4a0", shadow: "#c98e74", hair: "#9b5b38", coat: "#41818f", accent: "#cf5059" },
+  { skin: "#aa6e51", shadow: "#814738", hair: "#171719", coat: "#9b5f91", accent: "#e0a542" },
+  { skin: "#d99570", shadow: "#a95c4b", hair: "#d3b36f", coat: "#385f7d", accent: "#e4cf9c" },
+  { skin: "#70402f", shadow: "#4f2d28", hair: "#222329", coat: "#d16d55", accent: "#76b7a2" },
+];
+
+const scenePopulation: Record<string, AmbientPersonDef[]> = {
+  home: [{ prop: "cup", pose: "standing", scale: 1 }, { prop: "book", pose: "seated", scale: .94 }],
+  cafe: [{ prop: "laptop", pose: "seated", scale: .93, depth: 3 }, { prop: "cup", pose: "seated", scale: .9, depth: 3 }, { prop: "folder", pose: "standing", scale: 1.02 }, { prop: "book", pose: "seated", scale: .86, depth: 3 }, { prop: "phone", pose: "leaning", scale: .97 }, { prop: "bag", pose: "standing", scale: 1.06 }],
+  sorbonne: [{ prop: "laptop", pose: "seated", scale: .9, depth: 3 }, { prop: "book", pose: "seated", scale: .94, depth: 3 }, { prop: "folder", pose: "standing", scale: 1.04 }, { prop: "phone", pose: "seated", scale: .86, depth: 3 }, { prop: "bag", pose: "standing", scale: .96 }, { prop: "book", pose: "leaning", scale: 1 }],
+  prefecture: [{ prop: "folder", pose: "queue", scale: 1 }, { prop: "phone", pose: "queue", scale: .94 }, { prop: "bag", pose: "queue", scale: 1.05 }, { prop: "folder", pose: "seated", scale: .9 }, { prop: "none", pose: "standing", scale: 1 }],
+  louvre: [{ prop: "camera", pose: "standing", scale: .96 }, { prop: "book", pose: "seated", scale: .88, depth: 3 }, { prop: "phone", pose: "standing", scale: 1.04 }, { prop: "sketch", pose: "seated", scale: .9, depth: 3 }, { prop: "bag", pose: "walking", scale: .82 }, { prop: "none", pose: "standing", scale: .73 }],
+  eiffel: [{ prop: "camera", pose: "standing", scale: 1.04 }, { prop: "phone", pose: "standing", scale: .88 }, { prop: "bag", pose: "walking", scale: .78 }, { prop: "cup", pose: "seated", scale: .9 }, { prop: "none", pose: "walking", scale: .68 }, { prop: "camera", pose: "standing", scale: .74 }, { prop: "bag", pose: "standing", scale: 1.08 }],
+  montmartre: [{ prop: "sketch", pose: "seated", scale: .95 }, { prop: "camera", pose: "standing", scale: .84 }, { prop: "bag", pose: "walking", scale: .78 }, { prop: "cup", pose: "seated", scale: .9 }, { prop: "phone", pose: "leaning", scale: 1 }, { prop: "none", pose: "standing", scale: .72 }],
+  notredame: [{ prop: "book", pose: "standing", scale: .98 }, { prop: "camera", pose: "standing", scale: .85 }, { prop: "bag", pose: "walking", scale: .76 }, { prop: "cup", pose: "seated", scale: .9 }, { prop: "phone", pose: "standing", scale: 1.02 }, { prop: "sketch", pose: "seated", scale: .86 }],
+};
 
 const cafeOrderPool: CafeOrder[] = [
   {
@@ -862,11 +927,11 @@ function getRelationshipTitle(value: number) {
 }
 
 const cityEvents: CityEvent[] = [
-  { id: "canal-market", kicker: "СОБЫТИЕ ДНЯ", title: "Рынок у канала", body: "Соседи продают книги, пластинки и домашнюю выпечку. Малик ищет помощника на пару часов.", locationId: "cafe", hours: 2, effects: { money: 28, energy: -7, french: 3, assimilation: 6 } },
-  { id: "night-museum", kicker: "СОБЫТИЕ ДНЯ", title: "Вечер в Лувре", body: "Сегодня музей работает допоздна, а Люк проводит короткую экскурсию для местных жителей.", locationId: "louvre", hours: 3, effects: { money: -9, energy: -8, french: 4, assimilation: 9 } },
-  { id: "street-music", kicker: "СОБЫТИЕ ДНЯ", title: "Музыка на Монмартре", body: "На площади собирается импровизированный концерт. Можно помочь музыкантам и остаться на выступление.", locationId: "montmartre", hours: 3, effects: { energy: -6, french: 3, assimilation: 10 } },
-  { id: "seine-cleanup", kicker: "СОБЫТИЕ ДНЯ", title: "Волонтёры у Сены", body: "Амина зовёт на уборку набережной и общий пикник после работы.", locationId: "notredame", hours: 3, effects: { energy: -12, french: 3, assimilation: 8, stability: 5 } },
-  { id: "career-meetup", kicker: "СОБЫТИЕ ДНЯ", title: "Встреча молодых специалистов", body: "Тома ведёт открытую встречу о французском CV и первых собеседованиях.", locationId: "eiffel", hours: 2, effects: { money: -6, energy: -5, french: 4, stability: 9 } },
+  { id: "canal-market", kicker: "УТРЕННЕЕ СОБЫТИЕ", title: "Рынок у канала", body: "Соседи продают книги, пластинки и домашнюю выпечку. Малик ищет помощника до обеденного наплыва.", locationId: "cafe", period: "morning", startHour: 8, endHour: 12.5, hours: 2, effects: { money: 28, energy: -7, french: 3, assimilation: 6 } },
+  { id: "night-museum", kicker: "ВЕЧЕРНЕЕ СОБЫТИЕ", title: "Вечер в Лувре", body: "Музей работает допоздна, а Люк проводит камерную экскурсию для местных жителей.", locationId: "louvre", period: "evening", startHour: 18.5, endHour: 23, hours: 3, effects: { money: -9, energy: -8, french: 4, assimilation: 9 } },
+  { id: "street-music", kicker: "ВЕЧЕРНЕЕ СОБЫТИЕ", title: "Музыка на Монмартре", body: "После заката на площади начинается импровизированный концерт. Можно помочь музыкантам и остаться на выступление.", locationId: "montmartre", period: "evening", startHour: 19, endHour: 23.5, hours: 3, effects: { energy: -6, french: 3, assimilation: 10 } },
+  { id: "seine-cleanup", kicker: "УТРЕННЕЕ СОБЫТИЕ", title: "Волонтёры у Сены", body: "Амина зовёт на уборку набережной, пока улицы прохладные, и на общий пикник после работы.", locationId: "notredame", period: "morning", startHour: 9, endHour: 14, hours: 3, effects: { energy: -12, french: 3, assimilation: 8, stability: 5 } },
+  { id: "career-meetup", kicker: "ДНЕВНОЕ СОБЫТИЕ", title: "Встреча молодых специалистов", body: "После обеда Тома ведёт открытую встречу о французском CV и первых собеседованиях.", locationId: "eiffel", period: "day", startHour: 14, endHour: 18, hours: 2, effects: { money: -6, energy: -5, french: 4, stability: 9 } },
 ];
 
 const achievementDefs: AchievementDef[] = [
@@ -1013,25 +1078,54 @@ function formatTime(time: number) {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
+function getEventPeriodLabel(period: CityEvent["period"]) {
+  if (period === "morning") return "УТРО";
+  if (period === "evening") return "ВЕЧЕР";
+  return "ДЕНЬ";
+}
+
+function formatEventWindow(event: CityEvent) {
+  return `${formatTime(event.startHour)}–${formatTime(event.endHour)}`;
+}
+
 function PixelPortrait({ npc, small = false, unknown = false }: { npc: Npc; small?: boolean; unknown?: boolean }) {
+  const preset = portraitPresets[npc.id] ?? { skin: "#dca47d", shadow: "#ad6b55", accent: "#e3bd68", hairStyle: "crop", face: "round" };
   return (
-    <div className={`pixel-portrait ${small ? "is-small" : ""} ${unknown ? "is-unknown" : ""}`} style={{ "--shirt": npc.color, "--hair": npc.hair } as React.CSSProperties} aria-hidden="true">
-      <div className="portrait-hair" />
+    <div className={`pixel-portrait portrait-hair-${preset.hairStyle} portrait-face-${preset.face} ${small ? "is-small" : ""} ${unknown ? "is-unknown" : ""}`} style={{ "--shirt": npc.color, "--hair": npc.hair, "--skin": preset.skin, "--skin-shadow": preset.shadow, "--portrait-accent": preset.accent } as React.CSSProperties} aria-hidden="true">
+      <div className="portrait-hair portrait-hair-back"><i /></div>
+      <i className="portrait-ear left" /><i className="portrait-ear right" />
       <div className="portrait-face">
-        <i className="portrait-ear left" /><i className="portrait-ear right" /><i className="portrait-brow left" /><i className="portrait-brow right" /><i className="eye left" /><i className="eye right" /><i className="portrait-nose" /><i className="portrait-mouth" /><i className="portrait-cheek left" /><i className="portrait-cheek right" />
+        <i className="portrait-brow left" /><i className="portrait-brow right" /><i className="eye left" /><i className="eye right" /><i className="portrait-nose" /><i className="portrait-mouth" /><i className="portrait-cheek left" /><i className="portrait-cheek right" />
         {npc.accessory === "glasses" && <i className="glasses" />}
         {npc.accessory === "moustache" && <i className="moustache" />}
-        {npc.accessory === "scarf" && <i className="scarf" />}
       </div>
+      <div className="portrait-hair-front"><i /></div>
       {npc.accessory === "beret" && <div className="beret" />}
       <div className="portrait-neck" /><div className="portrait-body"><i className="portrait-collar left" /><i className="portrait-collar right" /><i className="portrait-lapel left" /><i className="portrait-lapel right" /><i className="portrait-button one" /><i className="portrait-button two" /></div>
+      {npc.accessory === "scarf" && <i className="scarf" />}
     </div>
   );
 }
 
-function EventArtwork({ eventId }: { eventId: string }) {
+function AmbientPerson({ person, look, index }: { person: AmbientPersonDef; look: (typeof ambientLooks)[number]; index: number }) {
   return (
-    <div className={`event-art event-art-${eventId}`} aria-hidden="true">
+    <div className={`scene-extra extra-${index + 1} pose-${person.pose} prop-${person.prop}`} style={{ "--extra-skin": look.skin, "--extra-shadow": look.shadow, "--extra-hair": look.hair, "--extra-coat": look.coat, "--extra-accent": look.accent, "--extra-scale": person.scale ?? 1, zIndex: person.depth ?? 6 } as React.CSSProperties} aria-hidden="true">
+      <i className="extra-ground-shadow" />
+      <div className="extra-figure">
+        <i className="extra-leg left" /><i className="extra-leg right" />
+        <i className="extra-body"><b className="extra-lapel left" /><b className="extra-lapel right" /></i>
+        <i className="extra-arm left" /><i className="extra-arm right" />
+        <i className="extra-neck" />
+        <i className="extra-head"><b className="extra-hair" /><b className="extra-eye left" /><b className="extra-eye right" /><b className="extra-nose" /></i>
+        {person.prop !== "none" && <i className="extra-prop" />}
+      </div>
+    </div>
+  );
+}
+
+function EventArtwork({ eventId, period }: { eventId: string; period: CityEvent["period"] }) {
+  return (
+    <div className={`event-art event-art-${eventId} event-art-period-${period}`} aria-hidden="true">
       <div className="event-art-sky"><i /><i /></div>
       <div className="event-art-landmark"><i className="art-a" /><i className="art-b" /><i className="art-c" /><i className="art-d" /></div>
       <div className="event-art-people"><i /><i /><i /><i /></div>
@@ -1137,6 +1231,8 @@ function PixelMetroMap({ trip, currentLeg }: { trip: MetroTrip; currentLeg: Metr
 }
 
 function LocationBackdrop({ location, sky }: { location: LocationDef; sky: string }) {
+  const population = scenePopulation[location.id] ?? [];
+  const lookOffset = Math.max(0, locations.findIndex((item) => item.id === location.id)) * 2;
   return (
     <div className={`world-scene scene-${location.id} scene-time-${sky}`}>
       <div className="world-sky"><i className="world-sun" /><i className="world-cloud cloud-a" /><i className="world-cloud cloud-b" /></div>
@@ -1147,10 +1243,8 @@ function LocationBackdrop({ location, sky }: { location: LocationDef; sky: strin
       <div className="scene-furniture">
         <span className="furniture table-one" /><span className="furniture table-two" /><span className="furniture bench" /><span className="furniture counter" />
       </div>
-      <div className="crowd-person person-one"><i className="mini-head" /><i className="mini-body" /><i className="mini-arm" /><i className="mini-prop laptop" /></div>
-      <div className="crowd-person person-two"><i className="mini-head" /><i className="mini-body" /><i className="mini-arm" /><i className="mini-prop cup" /></div>
-      <div className="crowd-person person-three"><i className="mini-head" /><i className="mini-body" /><i className="mini-arm" /><i className="mini-prop book" /></div>
-      <div className="crowd-person person-four"><i className="mini-head" /><i className="mini-body" /><i className="mini-arm" /></div>
+      <div className="scene-details"><i className="detail-one" /><i className="detail-two" /><i className="detail-three" /><i className="detail-four" /><i className="detail-five" /><i className="detail-six" /></div>
+      <div className="scene-population">{population.map((person, index) => <AmbientPerson key={`${location.id}-${index}-${person.prop}`} person={person} look={ambientLooks[(lookOffset + index) % ambientLooks.length]} index={index} />)}</div>
       <div className="scene-atmosphere"><i /><i /><i /></div>
       <div className="scene-label">
         <span>{location.district}</span>
@@ -1400,7 +1494,13 @@ export default function Home() {
   const activeActivityScene = activeAction ? getActivityScene(activeAction.action.id, actionProgress) : null;
   const currentCafeOrder = activeCafeShift ? activeCafeShift.orders[activeCafeShift.index] : null;
   const remainingDayHours = Math.max(0, 24 - time);
-  const cityEventFitsToday = currentCityEvent.hours < remainingDayHours;
+  const cityEventLatestStart = currentCityEvent.endHour - currentCityEvent.hours;
+  const cityEventStatus: "done" | "upcoming" | "open" | "missed" = cityEventDone ? "done" : time < currentCityEvent.startHour ? "upcoming" : time <= cityEventLatestStart ? "open" : "missed";
+  const cityEventWindow = formatEventWindow(currentCityEvent);
+  const cityEventStatusText = cityEventStatus === "done" ? "Событие уже пройдено" : cityEventStatus === "upcoming" ? `Начнётся в ${formatTime(currentCityEvent.startHour)}` : cityEventStatus === "open" ? `Идёт сейчас · войти до ${formatTime(cityEventLatestStart)}` : `Завершилось в ${formatTime(currentCityEvent.endHour)}`;
+  const cityEventAtVenue = locationId === currentCityEvent.locationId;
+  const cityEventButtonLabel = cityEventStatus === "done" ? "✓ Событие завершено" : cityEventStatus === "missed" ? "Сегодня уже завершилось" : !cityEventAtVenue ? "Показать место на карте →" : cityEventStatus === "upcoming" ? `Начнётся в ${formatTime(currentCityEvent.startHour)}` : "Участвовать сейчас →";
+  const cityEventButtonDisabled = !awake || cityEventStatus === "done" || cityEventStatus === "missed" || (cityEventAtVenue && cityEventStatus === "upcoming");
   const availableLocationActions = currentLocation.actions.filter((action) => action.repeatable || !completedActionIds.includes(action.id));
   const completedLocationActions = currentLocation.actions.filter((action) => !action.repeatable && completedActionIds.includes(action.id));
 
@@ -1836,13 +1936,17 @@ export default function Home() {
 
   const participateCityEvent = () => {
     if (cityEventDone || !awake) return;
-    if (locationId !== currentCityEvent.locationId) {
-      setViewMode("map");
-      setToast(`Событие проходит здесь: ${currentCityEventLocation.label}`);
+    if (cityEventStatus === "missed") {
+      setToast(`На ${currentCityEvent.title.toLowerCase()} сегодня уже не успеть. Завтра в городе будет новое событие.`);
       return;
     }
-    if (time + currentCityEvent.hours >= 24) {
-      setToast("Для этого события уже слишком поздно. Оно сменится завтра.");
+    if (locationId !== currentCityEvent.locationId) {
+      setViewMode("map");
+      setToast(`${currentCityEvent.title}: ${currentCityEventLocation.label} · вход до ${formatTime(cityEventLatestStart)}`);
+      return;
+    }
+    if (cityEventStatus === "upcoming") {
+      setToast(`${currentCityEvent.title} начнётся в ${formatTime(currentCityEvent.startHour)}. До этого времени можно заняться другими делами.`);
       return;
     }
     const nextCount = actionCount + 1;
@@ -2077,8 +2181,8 @@ export default function Home() {
               <div className="seine-map"><span>СЕНА · LA SEINE</span></div>
               <div className="metro-line metro-red" /><div className="metro-line metro-blue" /><div className="metro-line metro-gold" />
               {locations.map((location) => (
-                <button key={location.id} className={`map-location ${locationId === location.id ? "active" : ""} ${nextDailyTask?.locationId === location.id ? "guided" : ""}`} style={{ left: location.x, top: location.y }} onClick={() => travelTo(location.id)} aria-label={`Построить маршрут: ${location.label}`}>
-                  <LandmarkArt type={location.art} /><span>{location.short}</span>{locationId === location.id && <i className="you-pin">ВЫ ЗДЕСЬ</i>}
+                <button key={location.id} className={`map-location ${locationId === location.id ? "active" : ""} ${nextDailyTask?.locationId === location.id ? "guided" : ""} ${currentCityEvent.locationId === location.id && cityEventStatus !== "done" ? "event-destination" : ""}`} style={{ left: location.x, top: location.y }} onClick={() => travelTo(location.id)} aria-label={`Построить маршрут: ${location.label}`}>
+                  <LandmarkArt type={location.art} /><span>{location.short}</span>{locationId === location.id && <i className="you-pin">ВЫ ЗДЕСЬ</i>}{currentCityEvent.locationId === location.id && cityEventStatus !== "done" && <i className={`event-map-pin ${cityEventStatus}`}>{getEventPeriodLabel(currentCityEvent.period)} · {formatTime(currentCityEvent.startHour)}</i>}
                 </button>
               ))}
               <div className="map-legend"><b>КАК ПОЛЬЗОВАТЬСЯ</b><span><i className="legend-dot red" /> линия 1</span><span><i className="legend-dot blue" /> линия 4</span><span><i className="legend-dot gold" /> RER</span><p>Выберите место — время и способ поездки появятся до подтверждения.</p></div>
@@ -2099,7 +2203,7 @@ export default function Home() {
         <aside className="right-panel pixel-panel">
           <div className="location-heading"><span>СЕЙЧАС ВЫ ЗДЕСЬ</span><h2>{currentLocation.label}</h2><p>{currentLocation.district}</p></div>
           <p className="location-one-line">{currentLocation.description}</p>
-          <div className="side-tabs" role="tablist" aria-label="Действия в локации"><button className={sideTab === "actions" ? "active" : ""} onClick={() => setSideTab("actions")}>Дела</button><button className={sideTab === "people" ? "active" : ""} onClick={() => setSideTab("people")}>Люди</button><button className={sideTab === "event" ? "active" : ""} onClick={() => setSideTab("event")}>Ивент <i>{cityEventDone ? "✓" : "1"}</i></button></div>
+          <div className="side-tabs" role="tablist" aria-label="Действия в локации"><button className={sideTab === "actions" ? "active" : ""} onClick={() => setSideTab("actions")}>Дела</button><button className={sideTab === "people" ? "active" : ""} onClick={() => setSideTab("people")}>Люди</button><button className={sideTab === "event" ? "active" : ""} onClick={() => setSideTab("event")}>Ивент <i>{cityEventStatus === "done" ? "✓" : cityEventStatus === "open" ? "!" : cityEventStatus === "missed" ? "×" : "◷"}</i></button></div>
           {sideTab === "actions" && <div className="side-tab-content"><div className="actions-title"><span>ДОСТУПНЫЕ ДЕЛА</span><b>{awake ? `≈ ${Math.max(0, Math.floor(remainingDayHours))} ч. осталось` : "день завершён"}</b></div>{availableLocationActions.length > 0 ? <div className="action-list">{availableLocationActions.map((action) => {
             const lacksTime = action.hours > remainingDayHours;
             const guided = nextDailyTask?.trigger === "action" && nextDailyTask.targetId === action.id && nextDailyTask.locationId === currentLocation.id;
@@ -2112,7 +2216,7 @@ export default function Home() {
             <button className="talk-button" disabled={!awake} onClick={talkToNpc}>{metNpcs.includes(currentNpc.id) ? `Поговорить с ${currentNpc.name}` : `Представиться ${currentNpc.name}`} →</button>
             {npcAssignments[currentNpc.id] && <div className="npc-assignment"><span>ЛИЧНОЕ ПОРУЧЕНИЕ</span><strong>{npcAssignments[currentNpc.id].title}</strong><p>{npcAssignments[currentNpc.id].task}</p></div>}
           </div>}
-          {sideTab === "event" && <div className="side-tab-content"><div className={`city-event-card ${cityEventDone ? "completed" : ""}`}><div><span>{currentCityEvent.kicker}</span><b>{currentCityEvent.hours} ч.</b></div><h3>{currentCityEvent.title}</h3><p>{currentCityEvent.body}</p><small>⌖ {currentCityEventLocation.label} · {currentCityEventLocation.district}</small><button disabled={!awake || cityEventDone || (locationId === currentCityEvent.locationId && !cityEventFitsToday)} onClick={participateCityEvent}>{cityEventDone ? "✓ Событие завершено" : locationId === currentCityEvent.locationId ? cityEventFitsToday ? "Участвовать сейчас →" : "Сегодня уже не успеть" : "Показать место на карте →"}</button></div></div>}
+          {sideTab === "event" && <div className="side-tab-content"><div className={`city-event-card event-status-${cityEventStatus} ${cityEventDone ? "completed" : ""}`}><div><span>{currentCityEvent.kicker}</span><b>{currentCityEvent.hours} ч.</b></div><h3>{currentCityEvent.title}</h3><p>{currentCityEvent.body}</p><div className="event-schedule"><span>{getEventPeriodLabel(currentCityEvent.period)}</span><strong>{cityEventWindow}</strong><small>{cityEventStatusText}</small></div><small>⌖ {currentCityEventLocation.label} · {currentCityEventLocation.district}</small><button disabled={cityEventButtonDisabled} onClick={participateCityEvent}>{cityEventButtonLabel}</button></div></div>}
         </aside>
       </div>
 
@@ -2174,7 +2278,7 @@ export default function Home() {
           <div className="cafe-shift-layout">
             <section className="cafe-shift-scene">
               <div className="shift-awning" /><div className="shift-menu"><span>CAFÉ</span><i /><i /><i /></div><div className="shift-counter"><i className="shift-machine" /><i className="shift-cup one" /><i className="shift-cup two" /><i className="shift-croissant" /></div>
-              <div className="shift-customer"><PixelPortrait npc={currentCafeOrder.customer} /><div><span>{currentCafeOrder.customer.role}</span><strong>{currentCafeOrder.customer.name}</strong></div></div>
+              <div className="shift-customer" key={currentCafeOrder.id}><PixelPortrait npc={currentCafeOrder.customer} /><div><span>{currentCafeOrder.customer.role}</span><strong>{currentCafeOrder.customer.name}</strong></div></div>
               <div className="shift-entrance">{currentCafeOrder.entrance}</div>
               <div className="shift-queue">{activeCafeShift.orders.slice(activeCafeShift.index + 1).map((order) => <PixelPortrait key={order.id} npc={order.customer} small />)}</div>
               <div className="shift-steam"><i /><i /><i /></div>
@@ -2210,8 +2314,8 @@ export default function Home() {
       {showEventReveal && (
         <div className="modal-backdrop event-reveal-backdrop">
           <section className="event-reveal-modal">
-            <div className="event-poster"><span>PARIS</span><i>★</i><EventArtwork eventId={currentCityEvent.id} /><b>ДЕНЬ<br />{day}</b></div>
-            <div className="event-reveal-copy"><p className="eyebrow ink">СЕГОДНЯ В ГОРОДЕ</p><h2>{currentCityEvent.title}</h2><p>{currentCityEvent.body}</p><div className="event-place"><span>ГДЕ</span><strong>{currentCityEventLocation.label}</strong><small>{currentCityEventLocation.district} · около {currentCityEvent.hours} ч.</small></div><div className="event-reveal-actions"><button className="pixel-button primary" onClick={() => animateCloseWindow(() => setShowEventReveal(false))}>Запомнить и начать день</button><button className="event-map-link" onClick={() => animateCloseWindow(() => { setShowEventReveal(false); setSideTab("event"); setViewMode("map"); })}>Показать на карте →</button></div></div>
+            <div className={`event-poster event-poster-${currentCityEvent.period}`}><span>PARIS</span><i>{currentCityEvent.period === "evening" ? "☾" : "★"}</i><EventArtwork eventId={currentCityEvent.id} period={currentCityEvent.period} /><b>{getEventPeriodLabel(currentCityEvent.period)}<br />{day}</b></div>
+            <div className="event-reveal-copy"><p className="eyebrow ink">{currentCityEvent.kicker}</p><h2>{currentCityEvent.title}</h2><p>{currentCityEvent.body}</p><div className="event-place"><span>ГДЕ И КОГДА</span><strong>{currentCityEventLocation.label}</strong><small>{currentCityEventLocation.district} · {cityEventWindow} · занимает {currentCityEvent.hours} ч.</small><em className={`event-status-line ${cityEventStatus}`}>{cityEventStatusText}</em></div><div className="event-reveal-actions"><button className="pixel-button primary" onClick={() => animateCloseWindow(() => setShowEventReveal(false))}>{cityEventStatus === "missed" ? "Событие уже прошло · начать день" : "Запомнить расписание и начать день"}</button><button className="event-map-link" disabled={cityEventStatus === "missed"} onClick={() => animateCloseWindow(() => { setShowEventReveal(false); setSideTab("event"); setViewMode("map"); })}>Показать на карте →</button></div></div>
           </section>
         </div>
       )}
@@ -2224,8 +2328,8 @@ export default function Home() {
             <div className="dialogue-content">
               <p className="eyebrow ink">{dialogueStage === "intro" ? "НОВОЕ ЗНАКОМСТВО" : `РАЗГОВОР · ${formatTime(time + dialogueElapsedMinutes / 60)} · ПРОШЛО ${dialogueElapsedMinutes} МИН.`}</p>
               {dialogueStage === "intro" && <><div className="character-introduction"><span>КТО ЭТО?</span><p>{activeDialogueDef.intro}</p></div><div className="conversation-context"><span>О чём заходит речь</span><strong>{activeDialogueMission.title}</strong><p>{activeDialogueMission.goal}</p></div><button className="pixel-button primary" onClick={() => setDialogueStage("choice")}>Поздороваться и представиться →</button></>}
-              {dialogueStage === "choice" && <div className="dialogue-turn dialogue-turn-in" key={`dialogue-turn-${dialogueRoundIndex}`}><div className="conversation-flow">{activeDialogueRounds.map((_, index) => <i key={index} className={index <= dialogueRoundIndex ? "active" : ""} />)}<span>тема: {activeDialogueMission.title}</span></div>{dialogueTranscript.length > 0 && <div className="dialogue-transcript">{dialogueTranscript.slice(-4).map((line, index) => <p className={line.speaker} key={`${line.speaker}-${index}-${line.text}`}><span>{line.speaker === "player" ? profile.name : activeDialogue.name}</span>{line.text}</p>)}</div>}<blockquote>«{activeDialogueRound.prompt}»</blockquote><div className="dialogue-choices">{activeDialogueRound.choices.map((choice) => <button key={choice.label} onClick={() => chooseDialogue(choice)}><strong>«{choice.label}»</strong><b>→</b></button>)}</div></div>}
-              {dialogueStage === "result" && <div className="dialogue-turn dialogue-response-in"><div className="dialogue-answer-name">{activeDialogue.name}</div><blockquote>«{dialogueResult}»</blockquote><div className="dialogue-assignment-reveal"><span>ВЫ ДОГОВОРИЛИСЬ</span><strong>{activeDialogueMission.task}</strong><small><b>Что стало понятнее:</b> {activeDialogueMission.knowledge}</small></div><div className="dialogue-reward-note">Отношения, время и результаты будут засчитаны после завершения сцены.</div><button className="pixel-button primary" onClick={() => animateCloseWindow(completeDialogue)}>Завершить разговор и записать договорённость →</button></div>}
+              {dialogueStage === "choice" && <div className="dialogue-turn dialogue-turn-in" key={`dialogue-turn-${dialogueRoundIndex}`}><div className="conversation-flow">{activeDialogueRounds.map((_, index) => <i key={index} className={index <= dialogueRoundIndex ? "active" : ""} />)}<span>тема: {activeDialogueMission.title}</span></div>{dialogueTranscript.length > 0 && <div className="dialogue-transcript">{dialogueTranscript.slice(-4).map((line, index) => <p className={line.speaker} key={`${line.speaker}-${index}-${line.text}`}><span>{line.speaker === "player" ? profile.name : activeDialogue.name}</span>{line.text}</p>)}</div>}<blockquote>{activeDialogueRound.prompt}</blockquote><div className="dialogue-choices">{activeDialogueRound.choices.map((choice) => <button key={choice.label} onClick={() => chooseDialogue(choice)}><strong>{choice.label}</strong><b>→</b></button>)}</div></div>}
+              {dialogueStage === "result" && <div className="dialogue-turn dialogue-response-in"><div className="dialogue-answer-name">{activeDialogue.name}</div><blockquote>{dialogueResult}</blockquote><div className="dialogue-assignment-reveal"><span>ВЫ ДОГОВОРИЛИСЬ</span><strong>{activeDialogueMission.task}</strong><small><b>Что стало понятнее:</b> {activeDialogueMission.knowledge}</small></div><div className="dialogue-reward-note">Отношения, время и результаты будут засчитаны после завершения сцены.</div><button className="pixel-button primary" onClick={() => animateCloseWindow(completeDialogue)}>Завершить разговор и записать договорённость →</button></div>}
             </div>
           </section>
         </div>

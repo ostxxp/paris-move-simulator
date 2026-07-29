@@ -77,10 +77,17 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(page, /activeCafeShift/);
   assert.match(page, /EventArtwork/);
   assert.match(page, /remainingDayHours/);
+  assert.match(page, /scenePopulation/);
+  assert.match(page, /AmbientPerson/);
+  assert.match(page, /portraitPresets/);
+  assert.match(page, /startHour/);
+  assert.match(page, /endHour/);
+  assert.match(page, /cityEventStatus/);
   assert.match(page, /completedActionIds/);
   assert.match(page, /dialoguePendingRelationship/);
   assert.doesNotMatch(page, /Продолжить разговор/);
   assert.doesNotMatch(page, /dialogue-auto-next/);
+  assert.doesNotMatch(page, /<blockquote>«\{activeDialogueRound\.prompt\}»<\/blockquote>/);
   assert.match(page, /metroSchematic/);
   assert.doesNotMatch(page, /РАЗГОВОР \{activeDialogueIndex \+ 1\} ИЗ/);
   assert.doesNotMatch(page, /type="range"/);
@@ -102,6 +109,10 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(css, /cafe-shift-screen/);
   assert.match(css, /event-art-night-museum/);
   assert.match(css, /closing-window/);
+  assert.match(css, /scene-extra/);
+  assert.match(css, /extra-ground-shadow/);
+  assert.match(css, /event-schedule/);
+  assert.match(css, /portrait-hair-curls/);
   assert.match(css, /event-reveal-modal/);
   assert.match(css, /action-transition-screen/);
   assert.match(css, /pixel-metro-map/);
