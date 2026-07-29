@@ -85,6 +85,15 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(page, /cityEventStatus/);
   assert.match(page, /completedActionIds/);
   assert.match(page, /dialoguePendingRelationship/);
+  assert.match(page, /weekSchedule/);
+  assert.match(page, /currentWeekday/);
+  assert.match(page, /ОБЯЗАННОСТИ НА СЕГОДНЯ/);
+  assert.match(page, /parisDistricts/);
+  assert.match(page, /BOULEVARD PÉRIPHÉRIQUE/);
+  assert.match(page, /metro-map-floating-controls/);
+  assert.match(page, /focusCurrentStation/);
+  assert.match(page, /focusRoute/);
+  assert.doesNotMatch(page, /className="metro-line metro-(?:red|blue|gold)"/);
   assert.doesNotMatch(page, /Продолжить разговор/);
   assert.doesNotMatch(page, /dialogue-auto-next/);
   assert.doesNotMatch(page, /<blockquote>«\{activeDialogueRound\.prompt\}»<\/blockquote>/);
@@ -125,6 +134,11 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(css, /travel-cityscape/);
   assert.match(css, /bike-rider/);
   assert.match(css, /walk-backpack/);
+  assert.match(css, /paris-city-boundary/);
+  assert.match(css, /arrondissement-marker/);
+  assert.match(css, /week-agenda-card/);
+  assert.match(css, /week-duty\.late/);
+  assert.match(css, /metro-map-floating-controls/);
   const parsedMap = JSON.parse(metroMap);
   assert.equal(parsedMap.lines.length, 16);
   assert.ok(parsedMap.stations.length >= 300);

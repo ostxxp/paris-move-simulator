@@ -155,6 +155,33 @@ type DailyTask = {
   detail: string;
 };
 
+type DutyMetric = keyof DayProgress | "route";
+
+type WeekDuty = {
+  id: string;
+  label: string;
+  detail: string;
+  metric: DutyMetric;
+  target: number;
+  dueHour: number;
+  locationId?: string;
+};
+
+type WeekdayDef = {
+  name: string;
+  short: string;
+  french: string;
+  focus: string;
+  duties: WeekDuty[];
+};
+
+type ParisDistrict = {
+  number: number;
+  name: string;
+  x: string;
+  y: string;
+};
+
 type ActiveAction = {
   action: Action;
   locationId: string;
@@ -459,7 +486,7 @@ const cafeOrderPool: CafeOrder[] = [
 
 const locations: LocationDef[] = [
   {
-    id: "home", label: "Мансарда", short: "Квартира · 11e", district: "11e arrondissement", x: "80%", y: "76%", art: "home", npc: "claire",
+    id: "home", label: "Мансарда", short: "Квартира · 11e", district: "11e arrondissement", x: "72%", y: "52%", art: "home", npc: "claire",
     description: "Крошечная квартира под крышей. Отсюда начинается каждый день.",
     actions: [
       { id: "unpack", label: "Распаковать коробки", detail: "+уют · +опора", icon: "▣", hours: 2, effects: { energy: -7, assimilation: 2, stability: 5 } },
@@ -468,7 +495,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "sorbonne", label: "Сорбонна", short: "Сорбонна · 5e", district: "Quartier latin", x: "56%", y: "79%", art: "university", npc: "ines",
+    id: "sorbonne", label: "Сорбонна", short: "Сорбонна · 5e", district: "Quartier latin", x: "52%", y: "69%", art: "university", npc: "ines",
     description: "Аудитории, библиотека и слишком быстрый французский преподавателей.",
     actions: [
       { id: "class", label: "Пойти на занятие", detail: "+8 язык", icon: "📖", hours: 3, effects: { energy: -16, french: 8, assimilation: 3 }, repeatable: true },
@@ -477,7 +504,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "cafe", label: "Café des Amis", short: "Кафе · Canal", district: "Canal Saint-Martin", x: "76%", y: "27%", art: "cafe", npc: "malik",
+    id: "cafe", label: "Café des Amis", short: "Кафе · Canal", district: "Canal Saint-Martin", x: "61%", y: "32%", art: "cafe", npc: "malik",
     description: "Подработка, дешёвый эспрессо и разговоры, где никто не ждёт идеальной грамматики.",
     actions: [
       { id: "shift", label: "Выйти на смену", detail: "+68 € · −22 сил", icon: "☕", hours: 4, effects: { money: 68, energy: -22, french: 4, stability: 5 }, repeatable: true },
@@ -486,7 +513,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "prefecture", label: "Префектура полиции", short: "Префектура · 4e", district: "Île de la Cité", x: "59%", y: "56%", art: "office", npc: "bernard",
+    id: "prefecture", label: "Префектура полиции", short: "Префектура · 4e", district: "Île de la Cité", x: "48%", y: "54%", art: "office", npc: "bernard",
     description: "Записи, копии, переводы и главный ресурс иммигранта — терпение.",
     actions: [
       { id: "appointment", label: "Прийти по записи", detail: "+10 досье", icon: "🗂", hours: 3, effects: { energy: -14, admin: 10, stability: 3 } },
@@ -495,7 +522,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "louvre", label: "Лувр", short: "Лувр · 1er", district: "1er arrondissement", x: "43%", y: "47%", art: "louvre", npc: "luc",
+    id: "louvre", label: "Лувр", short: "Лувр · 1er", district: "1er arrondissement", x: "39%", y: "46%", art: "louvre", npc: "luc",
     description: "Дворец, стеклянная пирамида и несколько тысяч лет культуры под одной крышей.",
     actions: [
       { id: "museum", label: "Исследовать зал", detail: "−17 € · +культура", icon: "◆", hours: 3, effects: { money: -17, energy: -9, french: 2, assimilation: 10 }, repeatable: true },
@@ -503,7 +530,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "eiffel", label: "Эйфелева башня", short: "Эйфелева башня · 7e", district: "Champ de Mars", x: "18%", y: "53%", art: "eiffel", npc: "thomas",
+    id: "eiffel", label: "Эйфелева башня", short: "Эйфелева башня · 7e", district: "Champ de Mars", x: "22%", y: "58%", art: "eiffel", npc: "thomas",
     description: "Железный ориентир новой жизни. Особенно красив, когда включается подсветка.",
     actions: [
       { id: "walk", label: "Гулять по набережной", detail: "+культура · +силы", icon: "🚶", hours: 3, effects: { energy: 4, assimilation: 7, stability: 3 }, repeatable: true },
@@ -511,7 +538,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "montmartre", label: "Монмартр и Сакре-Кёр", short: "Монмартр · 18e", district: "18e arrondissement", x: "45%", y: "18%", art: "montmartre", npc: "yuki",
+    id: "montmartre", label: "Монмартр и Сакре-Кёр", short: "Монмартр · 18e", district: "18e arrondissement", x: "43%", y: "20%", art: "montmartre", npc: "yuki",
     description: "Лестницы, мастерские и белый купол Сакре-Кёр над крышами города.",
     actions: [
       { id: "pleinair", label: "Рисовать на площади", detail: "+22 € · +культура", icon: "🎨", hours: 3, effects: { money: 22, energy: -11, assimilation: 8, stability: 3 }, repeatable: true },
@@ -519,7 +546,7 @@ const locations: LocationDef[] = [
     ],
   },
   {
-    id: "notredame", label: "Нотр-Дам де Пари", short: "Нотр-Дам · 4e", district: "Île de la Cité", x: "66%", y: "70%", art: "notredame", npc: "amina",
+    id: "notredame", label: "Нотр-Дам де Пари", short: "Нотр-Дам · 4e", district: "Île de la Cité", x: "59%", y: "60%", art: "notredame", npc: "amina",
     description: "Готические башни, остров Сите и волонтёрский центр неподалёку.",
     actions: [
       { id: "volunteer", label: "Помочь волонтёрам", detail: "+10 культура", icon: "♡", hours: 4, effects: { energy: -18, french: 4, assimilation: 10, stability: 5 }, repeatable: true },
@@ -608,6 +635,96 @@ const dailyTaskSets: DailyTask[][] = [
     { id: "meet-luc", trigger: "talk", targetId: "luc", locationId: "louvre", label: "Познакомиться с Люком", detail: "В Лувре открой вкладку «Люди»" },
     { id: "explore-gallery", trigger: "action", targetId: "museum", locationId: "louvre", label: "Исследовать один зал", detail: "Открой «Дела» → «Исследовать зал»" },
   ],
+  [
+    { id: "friday-cafe", trigger: "visit", targetId: "cafe", locationId: "cafe", label: "Вернуться в Café des Amis", detail: "Пятничный бюджет начинается с поездки на смену" },
+    { id: "friday-malik", trigger: "talk", targetId: "malik", locationId: "cafe", label: "Сверить смену с Маликом", detail: "Во вкладке «Люди» обсуди гостей и французские фразы" },
+    { id: "friday-shift", trigger: "action", targetId: "shift", locationId: "cafe", label: "Отработать пятничную смену", detail: "Прими заказы гостей и заработай деньги на неделю" },
+  ],
+  [
+    { id: "montmartre-arrive", trigger: "visit", targetId: "montmartre", locationId: "montmartre", label: "Подняться на Монмартр", detail: "Выбери Монмартр на карте и рассчитай время дороги" },
+    { id: "meet-yuki", trigger: "talk", targetId: "yuki", locationId: "montmartre", label: "Найти Юки на площади", detail: "Во вкладке «Люди» спроси про нетуристические места" },
+    { id: "weekend-pleinair", trigger: "action", targetId: "pleinair", locationId: "montmartre", label: "Порисовать на площади", detail: "Открой «Дела» → «Рисовать на площади»" },
+  ],
+  [
+    { id: "notredame-arrive", trigger: "visit", targetId: "notredame", locationId: "notredame", label: "Добраться до острова Сите", detail: "На карте выбери Нотр-Дам де Пари" },
+    { id: "meet-amina", trigger: "talk", targetId: "amina", locationId: "notredame", label: "Встретиться с Аминой", detail: "Во вкладке «Люди» узнай, кому сегодня нужна помощь" },
+    { id: "sunday-volunteer", trigger: "action", targetId: "volunteer", locationId: "notredame", label: "Помочь волонтёрам", detail: "Открой «Дела» → «Помочь волонтёрам»" },
+  ],
+];
+
+const weekSchedule: WeekdayDef[] = [
+  {
+    name: "Понедельник", short: "ПН", french: "lundi", focus: "Учёба и рабочий ритм",
+    duties: [
+      { id: "mon-action", label: "Учёба или рабочая смена", detail: "Закончить два полезных дела", metric: "actions", target: 2, dueHour: 19, locationId: "cafe" },
+      { id: "mon-fr", label: "Французский в живой ситуации", detail: "Получить практику языка в деле или разговоре", metric: "french", target: 1, dueHour: 21 },
+    ],
+  },
+  {
+    name: "Вторник", short: "ВТ", french: "mardi", focus: "Контакты и язык",
+    duties: [
+      { id: "tue-talk", label: "Поддержать знакомство", detail: "Завершить один содержательный разговор", metric: "talks", target: 1, dueHour: 20 },
+      { id: "tue-travel", label: "Не засиживаться дома", detail: "Съездить хотя бы в один другой район", metric: "travels", target: 1, dueHour: 21 },
+    ],
+  },
+  {
+    name: "Среда", short: "СР", french: "mercredi", focus: "Документы и досье",
+    duties: [
+      { id: "wed-admin", label: "Бюрократическое окно", detail: "Продвинуть документы или досье", metric: "admin", target: 1, dueHour: 17, locationId: "prefecture" },
+      { id: "wed-route", label: "Сюжетный шаг", detail: "Закрыть один пункт маршрута дня", metric: "route", target: 1, dueHour: 21 },
+    ],
+  },
+  {
+    name: "Четверг", short: "ЧТ", french: "jeudi", focus: "Город и культура",
+    duties: [
+      { id: "thu-actions", label: "Два полезных дела", detail: "Не откладывать недельные задачи", metric: "actions", target: 2, dueHour: 21 },
+      { id: "thu-culture", label: "Связь с Парижем", detail: "Получить культурный или интеграционный опыт", metric: "culture", target: 1, dueHour: 22, locationId: "louvre" },
+    ],
+  },
+  {
+    name: "Пятница", short: "ПТ", french: "vendredi", focus: "Бюджет и коллеги",
+    duties: [
+      { id: "fri-income", label: "Деньги на расходы", detail: "Заработать не меньше 40 €", metric: "earned", target: 40, dueHour: 20, locationId: "cafe" },
+      { id: "fri-talk", label: "Не выпадать из круга", detail: "Поговорить с одним знакомым", metric: "talks", target: 1, dueHour: 22 },
+    ],
+  },
+  {
+    name: "Суббота", short: "СБ", french: "samedi", focus: "Исследование города",
+    duties: [
+      { id: "sat-culture", label: "Культурный выход", detail: "Музей, прогулка или городское событие", metric: "culture", target: 1, dueHour: 20, locationId: "montmartre" },
+      { id: "sat-travel", label: "Исследовать Париж", detail: "Совершить две поездки по городу", metric: "travels", target: 2, dueHour: 22 },
+    ],
+  },
+  {
+    name: "Воскресенье", short: "ВС", french: "dimanche", focus: "Люди и подготовка",
+    duties: [
+      { id: "sun-route", label: "Закрыть маршрут дня", detail: "Выполнить все три сюжетных шага", metric: "route", target: 3, dueHour: 21 },
+      { id: "sun-action", label: "Одно спокойное дело", detail: "Подготовиться к новой неделе", metric: "actions", target: 1, dueHour: 22, locationId: "home" },
+    ],
+  },
+];
+
+const parisDistricts: ParisDistrict[] = [
+  { number: 1, name: "Louvre", x: "44%", y: "47%" },
+  { number: 2, name: "Bourse", x: "48%", y: "40%" },
+  { number: 3, name: "Temple", x: "54%", y: "41%" },
+  { number: 4, name: "Hôtel-de-Ville", x: "55%", y: "50%" },
+  { number: 5, name: "Panthéon", x: "52%", y: "62%" },
+  { number: 6, name: "Luxembourg", x: "44%", y: "60%" },
+  { number: 7, name: "Palais-Bourbon", x: "36%", y: "52%" },
+  { number: 8, name: "Élysée", x: "36%", y: "41%" },
+  { number: 9, name: "Opéra", x: "42%", y: "34%" },
+  { number: 10, name: "Entrepôt", x: "51%", y: "32%" },
+  { number: 11, name: "Popincourt", x: "64%", y: "47%" },
+  { number: 12, name: "Reuilly", x: "73%", y: "59%" },
+  { number: 13, name: "Gobelins", x: "59%", y: "70%" },
+  { number: 14, name: "Observatoire", x: "44%", y: "72%" },
+  { number: 15, name: "Vaugirard", x: "31%", y: "66%" },
+  { number: 16, name: "Passy", x: "23%", y: "51%" },
+  { number: 17, name: "Batignolles", x: "34%", y: "30%" },
+  { number: 18, name: "Montmartre", x: "43%", y: "22%" },
+  { number: 19, name: "Buttes-Chaumont", x: "59%", y: "27%" },
+  { number: 20, name: "Ménilmontant", x: "70%", y: "40%" },
 ];
 
 const dialogues: Record<string, DialogueDef> = {
@@ -1164,8 +1281,55 @@ function PixelMetroMap({ trip, currentLeg }: { trip: MetroTrip; currentLeg: Metr
   const mapWidth = metroSchematic.width;
   const mapHeight = metroSchematic.height;
 
-  const setSafeZoom = (nextZoom: number) => setZoom(Math.max(1, Math.min(4, Math.round(nextZoom * 10) / 10)));
-  const resetMap = () => { setZoom(1); setPan({ x: 0, y: 0 }); setSelectedStationKey(currentStationKey); };
+  const clampZoom = (value: number) => Math.max(1, Math.min(4, Math.round(value * 10) / 10));
+  const clampPan = (value: { x: number; y: number }, viewZoom = zoom) => ({
+    x: Math.min(0, Math.max(mapWidth * (1 - viewZoom), value.x)),
+    y: Math.min(0, Math.max(mapHeight * (1 - viewZoom), value.y)),
+  });
+  const changeZoom = (delta: number) => {
+    const nextZoom = clampZoom(zoom + delta);
+    const centerX = (mapWidth / 2 - pan.x) / zoom;
+    const centerY = (mapHeight / 2 - pan.y) / zoom;
+    setZoom(nextZoom);
+    setPan(clampPan({ x: mapWidth / 2 - centerX * nextZoom, y: mapHeight / 2 - centerY * nextZoom }, nextZoom));
+  };
+  const showOverview = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+  const focusCurrentStation = () => {
+    const station = metroSchematic.stations.find((item) => item.key === currentStationKey);
+    if (!station) return;
+    const nextZoom = 2.3;
+    setZoom(nextZoom);
+    setPan(clampPan({ x: mapWidth / 2 - station.x * nextZoom, y: mapHeight / 2 - station.y * nextZoom }, nextZoom));
+    setSelectedStationKey(station.key);
+  };
+  const focusRoute = () => {
+    const points = metroSchematic.stations.filter((station) => routeStations.has(station.key));
+    if (!points.length) { showOverview(); return; }
+    const xs = points.map((point) => point.x);
+    const ys = points.map((point) => point.y);
+    const minX = Math.min(...xs); const maxX = Math.max(...xs);
+    const minY = Math.min(...ys); const maxY = Math.max(...ys);
+    const nextZoom = clampZoom(Math.max(1.35, Math.min(mapWidth / Math.max(260, maxX - minX + 260), mapHeight / Math.max(220, maxY - minY + 220), 2.8)));
+    setZoom(nextZoom);
+    setPan(clampPan({ x: mapWidth / 2 - ((minX + maxX) / 2) * nextZoom, y: mapHeight / 2 - ((minY + maxY) / 2) * nextZoom }, nextZoom));
+  };
+  const moveMap = (x: number, y: number) => {
+    const nudge = Math.max(90, 170 / zoom);
+    setPan((value) => clampPan({ x: value.x + x * nudge, y: value.y + y * nudge }));
+  };
+  const handleMapKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const key = event.key.toLowerCase();
+    if (["+", "=", "-", "arrowup", "arrowdown", "arrowleft", "arrowright", "home", "0", "r", "c"].includes(key)) event.preventDefault();
+    if (key === "+" || key === "=") changeZoom(.35);
+    else if (key === "-") changeZoom(-.35);
+    else if (key === "arrowup") moveMap(0, 1);
+    else if (key === "arrowdown") moveMap(0, -1);
+    else if (key === "arrowleft") moveMap(1, 0);
+    else if (key === "arrowright") moveMap(-1, 0);
+    else if (key === "home" || key === "0") showOverview();
+    else if (key === "r") focusRoute();
+    else if (key === "c") focusCurrentStation();
+  };
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -1174,8 +1338,8 @@ function PixelMetroMap({ trip, currentLeg }: { trip: MetroTrip; currentLeg: Metr
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId || !viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
-    const mapUnitsPerPixel = mapWidth / Math.max(1, rect.width);
-    setPan({ x: drag.panX + (event.clientX - drag.x) * mapUnitsPerPixel, y: drag.panY + (event.clientY - drag.y) * mapUnitsPerPixel });
+    const mapUnitsPerPixel = Math.max(mapWidth / Math.max(1, rect.width), mapHeight / Math.max(1, rect.height));
+    setPan(clampPan({ x: drag.panX + (event.clientX - drag.x) * mapUnitsPerPixel, y: drag.panY + (event.clientY - drag.y) * mapUnitsPerPixel }));
   };
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
@@ -1186,17 +1350,21 @@ function PixelMetroMap({ trip, currentLeg }: { trip: MetroTrip; currentLeg: Metr
     <div className={`official-metro-map ${zoom >= 1.6 ? "is-zoomed" : ""}`} aria-label="Интерактивная схема метро Парижа">
       <div className="metro-map-toolbar">
         <div><b>MÉTRO PARIS</b><span>Реальная схема · 311 станций</span></div>
-        <div className="metro-zoom-controls" aria-label="Масштаб карты"><button onClick={() => setSafeZoom(zoom - .35)} aria-label="Уменьшить">-</button><output>{Math.round(zoom * 100)}%</output><button onClick={() => setSafeZoom(zoom + .35)} aria-label="Увеличить">+</button><button className="metro-reset" onClick={resetMap}>Центр</button></div>
+        <div className="metro-toolbar-note"><b>МАРШРУТ ПОДСВЕЧЕН</b><span>Выберите станцию или используйте панель на карте</span></div>
       </div>
       <div
         ref={viewportRef}
         className="metro-map-viewport"
+        tabIndex={0}
+        role="region"
+        aria-label="Схема метро. Перетаскивайте карту, используйте плюс и минус или клавиши со стрелками."
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        onDoubleClick={() => setSafeZoom(zoom + .5)}
-        onWheel={(event) => { event.preventDefault(); setSafeZoom(zoom + (event.deltaY < 0 ? .25 : -.25)); }}
+        onDoubleClick={() => changeZoom(.5)}
+        onWheel={(event) => { event.preventDefault(); changeZoom(event.deltaY < 0 ? .25 : -.25); }}
+        onKeyDown={handleMapKeyDown}
       >
         <svg viewBox={`0 0 ${mapWidth} ${mapHeight}`} role="img" aria-label="Линии и станции парижского метро">
           <defs><pattern id="metro-paper-grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M 28 0 L 0 0 0 28" /></pattern></defs>
@@ -1212,7 +1380,7 @@ function PixelMetroMap({ trip, currentLeg }: { trip: MetroTrip; currentLeg: Metr
                 const onRoute = routeStations.has(station.key);
                 const interchange = station.lines.length > 1;
                 const showLabel = zoom >= 1.6 || current || onRoute || station.lines.length >= 4;
-                return <g key={station.key} className={`official-station ${interchange ? "interchange" : ""} ${onRoute ? "on-route" : ""} ${current ? "current" : ""} ${selectedStationKey === station.key ? "selected" : ""}`} transform={`translate(${station.x} ${station.y})`} onPointerDown={(event) => event.stopPropagation()} onClick={() => setSelectedStationKey(station.key)} role="button" tabIndex={0} aria-label={`${station.name}, линии ${station.lines.join(", ")}`}>
+                return <g key={station.key} className={`official-station ${interchange ? "interchange" : ""} ${onRoute ? "on-route" : ""} ${current ? "current" : ""} ${selectedStationKey === station.key ? "selected" : ""}`} transform={`translate(${station.x} ${station.y})`} onPointerDown={(event) => event.stopPropagation()} onClick={() => setSelectedStationKey(station.key)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedStationKey(station.key); } }} role="button" tabIndex={0} aria-label={`${station.name}, линии ${station.lines.join(", ")}`}>
                   {interchange && <circle className="station-ring" r={7} />}
                   <circle className="station-dot" r={current ? 7 : onRoute ? 5.5 : 3.2} />
                   {showLabel && <text x={8} y={-7}>{station.name}</text>}
@@ -1221,8 +1389,13 @@ function PixelMetroMap({ trip, currentLeg }: { trip: MetroTrip; currentLeg: Metr
             </g>
           </g>
         </svg>
-        <div className="metro-map-help"><span>Зажмите и двигайте</span><span>Колесо или +/− для масштаба</span></div>
-        {selectedStation && <div className="metro-station-inspector"><small>СТАНЦИЯ</small><strong>{selectedStation.name}</strong><div>{selectedStation.lines.map((lineId) => { const line = metroSchematic.lines.find((item) => item.id === lineId); return <i key={lineId} style={{ background: line?.color }}>{lineId}</i>; })}</div></div>}
+        <div className="metro-map-floating-controls" aria-label="Управление картой" onPointerDown={(event) => event.stopPropagation()}>
+          <div className="metro-map-zoom-row"><button type="button" onClick={() => changeZoom(-.35)} disabled={zoom <= 1} aria-label="Уменьшить масштаб">−</button><output aria-live="polite" aria-label="Текущий масштаб">{Math.round(zoom * 100)}%</output><button type="button" onClick={() => changeZoom(.35)} disabled={zoom >= 4} aria-label="Увеличить масштаб">+</button></div>
+          <div className="metro-map-pan-pad" aria-label="Перемещение карты"><button type="button" className="pan-up" onClick={() => moveMap(0, 1)} disabled={zoom <= 1} aria-label="Показать область выше">↑</button><button type="button" className="pan-left" onClick={() => moveMap(1, 0)} disabled={zoom <= 1} aria-label="Показать область слева">←</button><button type="button" className="pan-center" onClick={focusCurrentStation} aria-label="Вернуться к текущей станции">●</button><button type="button" className="pan-right" onClick={() => moveMap(-1, 0)} disabled={zoom <= 1} aria-label="Показать область справа">→</button><button type="button" className="pan-down" onClick={() => moveMap(0, -1)} disabled={zoom <= 1} aria-label="Показать область ниже">↓</button></div>
+          <div className="metro-map-view-actions"><button type="button" onClick={focusRoute}>Весь маршрут</button><button type="button" onClick={showOverview}>Вся схема</button></div>
+        </div>
+        <div className="metro-map-help"><span>Зажмите и двигайте</span><span>Клавиши: + − · стрелки · R маршрут</span></div>
+        {selectedStation && <div className="metro-station-inspector" aria-live="polite"><small>СТАНЦИЯ</small><strong>{selectedStation.name}</strong><div>{selectedStation.lines.map((lineId) => { const line = metroSchematic.lines.find((item) => item.id === lineId); return <i key={lineId} style={{ background: line?.color }}>{lineId}</i>; })}</div></div>}
       </div>
       <div className="metro-route-summary"><div><i className="map-current-dot" /><span>Вы здесь</span><strong>{currentLeg.from}</strong></div><div><i className="map-route-dot" /><span>Цель</span><strong>{trip.destination.label}</strong></div><p>Линии маршрута подсвечены. Нажмите на станцию, чтобы увидеть пересадки.</p></div>
       <div className="metro-data-credit">Данные: Île-de-France Mobilités Open Data · Licence Ouverte 2.0</div>
@@ -1479,6 +1652,13 @@ export default function Home() {
   const isDailyTaskDone = (task: DailyTask) => completedDailyTaskIds.includes(task.id) || (task.trigger === "action" && completedActionIds.includes(task.targetId));
   const allDailyTasksDone = dailyTasks.every(isDailyTaskDone);
   const nextDailyTask = dailyTasks.find((task) => !isDailyTaskDone(task)) ?? null;
+  const weekdayIndex = (day - 1) % weekSchedule.length;
+  const weekNumber = Math.floor((day - 1) / weekSchedule.length) + 1;
+  const currentWeekday = weekSchedule[weekdayIndex];
+  const getDutyProgress = (duty: WeekDuty) => duty.metric === "route" ? dailyTasks.filter(isDailyTaskDone).length : dailyProgress[duty.metric];
+  const isDutyDone = (duty: WeekDuty) => getDutyProgress(duty) >= duty.target;
+  const dutiesDone = currentWeekday.duties.filter(isDutyDone).length;
+  const allDutiesDone = dutiesDone === currentWeekday.duties.length;
   const currentCityEvent = cityEvents[(day - 1) % cityEvents.length];
   const currentCityEventLocation = locations.find((location) => location.id === currentCityEvent.locationId) ?? locations[0];
   const currentCityEventKey = `${day}-${currentCityEvent.id}`;
@@ -1649,8 +1829,8 @@ export default function Home() {
   const wakeUp = (hour: number, energy: number, label: string) => {
     setTime(hour); setStats((current) => applyEffects(current, { energy })); setAwake(true);
     setShowEventReveal(true);
-    addJournal(`День ${day}: ${label.toLowerCase()}.`);
-    setToast(`День ${day} начался в ${formatTime(hour)}`);
+    addJournal(`${currentWeekday.name}, день ${day}: ${label.toLowerCase()}.`);
+    setToast(`${currentWeekday.name} · день начался в ${formatTime(hour)}`);
   };
 
   const startDayTransition = (message = "Дела закончены. Пора возвращаться в мансарду.") => {
@@ -1668,7 +1848,16 @@ export default function Home() {
     window.setTimeout(() => setDayTransitionPhase(null), 4700);
   };
 
-  const finishDay = () => startDayTransition();
+  const finishDay = () => {
+    if (dayTransitionPhase) return;
+    const missed = currentWeekday.duties.filter((duty) => !isDutyDone(duty));
+    addJournal(allDutiesDone
+      ? `${currentWeekday.name}: все обязанности выполнены.`
+      : `${currentWeekday.name}: выполнено ${dutiesDone}/${currentWeekday.duties.length}; осталось: ${missed.map((duty) => duty.label).join(", ")}.`);
+    startDayTransition(allDutiesDone
+      ? "Обязанности закрыты. Можно спокойно возвращаться домой."
+      : `День завершён: выполнено ${dutiesDone} из ${currentWeekday.duties.length} обязанностей.`);
+  };
 
   const maybeTriggerEvent = (nextCount: number) => {
     const thresholds = [1, 4, 7, 10, 14, 18];
@@ -1934,6 +2123,19 @@ export default function Home() {
     }
   };
 
+  const guideDuty = (duty: WeekDuty) => {
+    if (isDutyDone(duty)) { setToast(`Обязанность «${duty.label}» уже выполнена.`); return; }
+    if (duty.locationId && locationId !== duty.locationId) {
+      const destination = locations.find((location) => location.id === duty.locationId);
+      setViewMode("map");
+      setToast(`${duty.label}: ориентир на карте — ${destination?.label ?? "нужная локация"}.`);
+      return;
+    }
+    setViewMode("scene");
+    setSideTab(duty.metric === "talks" ? "people" : "actions");
+    setToast(`${duty.label}: ${duty.detail}. Срок — до ${formatTime(duty.dueHour)}.`);
+  };
+
   const participateCityEvent = () => {
     if (cityEventDone || !awake) return;
     if (cityEventStatus === "missed") {
@@ -2140,7 +2342,7 @@ export default function Home() {
     <main className={`game-shell sky-${sky} ${closingWindow ? "closing-window" : ""}`}>
       <header className="game-header">
         <div className="brand-mini"><span className="mini-tower">A</span><div><strong>PARIS, NOUVELLE VIE</strong><small>{selectedRoute.subtitle}</small></div></div>
-        <div className="time-block"><span>ГЛАВА {year}/5 · ДЕНЬ {day}</span><strong>{formatTime(time)}</strong><em>{sky === "night" ? "Ночь" : sky === "sunset" ? "Закат" : sky === "dawn" ? "Рассвет" : "День"}</em></div>
+        <div className="time-block"><span>ГЛАВА {year}/5 · НЕДЕЛЯ {weekNumber}</span><strong>{formatTime(time)}</strong><em>{currentWeekday.name} · день {day} · {sky === "night" ? "ночь" : sky === "sunset" ? "закат" : sky === "dawn" ? "рассвет" : "день"}</em></div>
         <div className="header-actions"><button className={viewMode === "map" ? "active" : ""} onClick={() => setViewMode(viewMode === "map" ? "scene" : "map")}>⌖ {viewMode === "map" ? "Вернуться" : "Карта"}</button><button onClick={() => setShowGameMenu(true)}>☰ Меню</button></div>
       </header>
 
@@ -2153,8 +2355,17 @@ export default function Home() {
             <button className="stats-toggle" onClick={() => setStatsExpanded((value) => !value)}><span>Развитие персонажа</span><b>{statsExpanded ? "Свернуть −" : "Показать +"}</b></button>
             {statsExpanded && <div className="secondary-stats"><StatMeter label="Французский" value={stats.french} icon="FR" /><StatMeter label="Досье" value={stats.admin} icon="▤" /><StatMeter label="Интеграция" value={stats.assimilation} icon="◆" /><StatMeter label="Опора" value={stats.stability} icon="⌂" /></div>}
           </div>
+          <div className="week-agenda-card">
+            <div className="week-agenda-head"><span>НЕДЕЛЯ {weekNumber}</span><strong>{currentWeekday.name}</strong><em>{currentWeekday.french} · {currentWeekday.focus}</em></div>
+            <div className="week-strip" aria-label={`Календарь недели, сегодня ${currentWeekday.name}`}>{weekSchedule.map((item, index) => <span key={item.short} className={index === weekdayIndex ? "active" : index < weekdayIndex ? "past" : ""}><b>{item.short}</b><i>{index + 1}</i></span>)}</div>
+            <div className="duty-head"><span>ОБЯЗАННОСТИ НА СЕГОДНЯ</span><b>{dutiesDone}/{currentWeekday.duties.length}</b></div>
+            <div className="week-duty-list">{currentWeekday.duties.map((duty) => {
+              const done = isDutyDone(duty); const progress = getDutyProgress(duty); const late = !done && time >= duty.dueHour;
+              return <button key={duty.id} className={`week-duty ${done ? "done" : ""} ${late ? "late" : ""}`} onClick={() => guideDuty(duty)}><i>{done ? "✓" : late ? "!" : "○"}</i><div><strong>{duty.label}</strong><small>{duty.detail}</small></div><b>{Math.min(progress, duty.target)}/{duty.target}<small>до {formatTime(duty.dueHour)}</small></b></button>;
+            })}</div>
+          </div>
           <div className="daily-plan-card">
-            <div className="daily-plan-head"><span>МАРШРУТ ДНЯ · ДЕНЬ {day}</span><b>{dailyTasks.filter(isDailyTaskDone).length}/{dailyTasks.length}</b></div>
+            <div className="daily-plan-head"><span>СЮЖЕТНЫЙ МАРШРУТ · ДЕНЬ {day}</span><b>{dailyTasks.filter(isDailyTaskDone).length}/{dailyTasks.length}</b></div>
             <h3>{nextDailyTask ? `Сейчас: ${nextDailyTask.label}` : "Маршрут дня завершён"}</h3>
             <div className="daily-task-list">
               {dailyTasks.map((task, index) => {
@@ -2176,16 +2387,21 @@ export default function Home() {
         <section className={`center-stage mode-${viewMode}`}>
           {viewMode === "map" ? (
             <div className="map-panel map-panel-v2">
-              <div className="map-topline"><div className="map-name">PARIS <span>КАРТА РАЙОНОВ И МАРШРУТОВ</span></div><button onClick={() => setViewMode("scene")}>× Закрыть карту</button></div>
-              <div className="arrondissement-ring ring-one" /><div className="arrondissement-ring ring-two" /><div className="arrondissement-ring ring-three" />
-              <div className="seine-map"><span>СЕНА · LA SEINE</span></div>
-              <div className="metro-line metro-red" /><div className="metro-line metro-blue" /><div className="metro-line metro-gold" />
+              <div className="map-topline"><div className="map-name">PARIS <span>20 ОКРУГОВ · СЕНА · ВАЖНЫЕ МЕСТА</span></div><button onClick={() => setViewMode("scene")}>× Закрыть карту</button></div>
+              <div className="map-calendar-stamp"><span>{currentWeekday.short} · НЕДЕЛЯ {weekNumber}</span><strong>{formatTime(time)}</strong><small>{currentWeekday.focus}</small></div>
+              <div className="paris-city-boundary" aria-hidden="true" />
+              <div className="peripherique-ring" aria-hidden="true"><span>BOULEVARD PÉRIPHÉRIQUE</span></div>
+              <div className="atlas-park park-boulogne" aria-hidden="true"><span>BOIS DE<br />BOULOGNE</span></div><div className="atlas-park park-vincennes" aria-hidden="true"><span>BOIS DE<br />VINCENNES</span></div><div className="atlas-park park-luxembourg" aria-hidden="true"><span>JARDIN DU LUXEMBOURG</span></div><div className="atlas-park park-tuileries" aria-hidden="true"><span>TUILERIES</span></div>
+              <div className="atlas-roads" aria-hidden="true"><i className="atlas-road road-champs"><span>AV. DES CHAMPS-ÉLYSÉES</span></i><i className="atlas-road road-rivoli"><span>RUE DE RIVOLI</span></i><i className="atlas-road road-saint-germain"><span>BD SAINT-GERMAIN</span></i><i className="atlas-road road-sebastopol"><span>BD DE SÉBASTOPOL</span></i><i className="atlas-road road-voltaire"><span>BD VOLTAIRE</span></i><i className="atlas-road road-magenta"><span>BD DE MAGENTA</span></i></div>
+              <div className="arrondissement-layer" aria-hidden="true">{parisDistricts.map((district) => <span key={district.number} className="arrondissement-marker" style={{ left: district.x, top: district.y }}><b>{district.number}</b><small>{district.name}</small></span>)}</div>
+              <div className="seine-map"><span>LA SEINE · СЕНА</span><i className="map-island island-cite">ÎLE DE LA CITÉ</i><i className="map-island island-saint-louis">ST-LOUIS</i></div>
               {locations.map((location) => (
                 <button key={location.id} className={`map-location ${locationId === location.id ? "active" : ""} ${nextDailyTask?.locationId === location.id ? "guided" : ""} ${currentCityEvent.locationId === location.id && cityEventStatus !== "done" ? "event-destination" : ""}`} style={{ left: location.x, top: location.y }} onClick={() => travelTo(location.id)} aria-label={`Построить маршрут: ${location.label}`}>
-                  <LandmarkArt type={location.art} /><span>{location.short}</span>{locationId === location.id && <i className="you-pin">ВЫ ЗДЕСЬ</i>}{currentCityEvent.locationId === location.id && cityEventStatus !== "done" && <i className={`event-map-pin ${cityEventStatus}`}>{getEventPeriodLabel(currentCityEvent.period)} · {formatTime(currentCityEvent.startHour)}</i>}
+                  <LandmarkArt type={location.art} /><span><b>{location.label}</b><small>{location.district}</small></span>{locationId === location.id && <i className="you-pin">ВЫ ЗДЕСЬ</i>}{currentCityEvent.locationId === location.id && cityEventStatus !== "done" && <i className={`event-map-pin ${cityEventStatus}`}>{getEventPeriodLabel(currentCityEvent.period)} · {formatTime(currentCityEvent.startHour)}</i>}
                 </button>
               ))}
-              <div className="map-legend"><b>КАК ПОЛЬЗОВАТЬСЯ</b><span><i className="legend-dot red" /> линия 1</span><span><i className="legend-dot blue" /> линия 4</span><span><i className="legend-dot gold" /> RER</span><p>Выберите место — время и способ поездки появятся до подтверждения.</p></div>
+              <div className="map-compass" aria-hidden="true"><b>N</b><i /></div><div className="map-scale" aria-hidden="true"><i /><span>0</span><span>2</span><span>4 км</span></div>
+              <div className="map-legend"><b>УСЛОВНЫЕ ОБОЗНАЧЕНИЯ</b><span><i className="legend-swatch district" /> округ</span><span><i className="legend-swatch river" /> Сена</span><span><i className="legend-swatch current" /> вы здесь</span><span><i className="legend-swatch event" /> событие дня</span><p>Нажмите на достопримечательность: время и способы дороги появятся до подтверждения. Подробная схема метро откроется после выбора поездки.</p></div>
               <div className="map-grain" />
             </div>
           ) : (
@@ -2208,7 +2424,7 @@ export default function Home() {
             const lacksTime = action.hours > remainingDayHours;
             const guided = nextDailyTask?.trigger === "action" && nextDailyTask.targetId === action.id && nextDailyTask.locationId === currentLocation.id;
             return <button className={`${guided ? "quest-action" : ""} ${lacksTime ? "lacks-time" : ""}`} key={action.id} disabled={!awake || lacksTime} onClick={() => performAction(action)}><span className="action-icon">{action.icon}</span><span><strong>{action.label}</strong><small>{lacksTime && awake ? `Нужно ${action.hours} ч. · сегодня уже не успеть` : `${action.detail} · ${action.hours} ч. · ${action.repeatable ? "можно повторять" : "один раз"}`}</small></span><b>{lacksTime ? "⌛" : "›"}</b></button>;
-          })}</div> : <div className="no-actions-left"><b>✓</b><strong>Все сюжетные дела здесь завершены</strong><span>Завтра маршрут дня предложит следующий шаг в другой части Парижа.</span></div>}{completedLocationActions.length > 0 && <div className="completed-actions-note">Завершено в этой локации: {completedLocationActions.length}</div>}{awake && <button className="end-day" onClick={finishDay}>Завершить день · вернуться домой</button>}</div>}
+          })}</div> : <div className="no-actions-left"><b>✓</b><strong>Все сюжетные дела здесь завершены</strong><span>Завтра маршрут дня предложит следующий шаг в другой части Парижа.</span></div>}{completedLocationActions.length > 0 && <div className="completed-actions-note">Завершено в этой локации: {completedLocationActions.length}</div>}{awake && <button className={`end-day ${allDutiesDone ? "duties-complete" : ""}`} onClick={finishDay}>Завершить день · обязанности {dutiesDone}/{currentWeekday.duties.length}</button>}</div>}
           {sideTab === "people" && <div className="side-tab-content people-tab">
             <div className="npc-card"><PixelPortrait npc={currentNpc} small /><div><span>{currentNpc.role}</span><strong>{currentNpc.name}</strong><p>{metNpcs.includes(currentNpc.id) ? `«${currentNpc.line}»` : "Вы ещё не знакомы. Первый разговор начнётся с представления."}</p></div></div>
             <div className="relationship-card"><div><span>ОТНОШЕНИЯ</span><b>{getRelationshipTitle(currentNpcRelationship)}</b><strong>{currentNpcRelationship}%</strong></div><div className="relationship-track"><i style={{ width: `${currentNpcRelationship}%` }} /></div></div>
@@ -2244,7 +2460,7 @@ export default function Home() {
           <section className="metro-simulator">
             <button className="modal-close" onClick={() => animateCloseWindow(() => setMetroTrip(null))}>×</button>
             <header className="metro-sim-header"><div className="metro-mark">M</div><div><span>PARIS MÉTRO · НАВИГАЦИЯ</span><h2>{currentMetroLeg.from}</h2><p>Маршрут до {metroTrip.destination.label} · примерно {metroTrip.minutes} мин.</p></div></header>
-            <PixelMetroMap trip={metroTrip} currentLeg={currentMetroLeg} />
+            <PixelMetroMap key={`${metroStep}-${currentMetroLeg.lineId}-${currentMetroLeg.from}`} trip={metroTrip} currentLeg={currentMetroLeg} />
             <div className="metro-platform-board"><span>СТАНЦИЯ · {currentMetroLeg.from}</span><strong>{metroStage === "line" ? "Выберите линию по общей схеме" : "Выберите платформу по конечной станции"}</strong><p>{metroMessage}</p></div>
             {metroStage === "line" ? <div className="metro-choice-grid line-choices">{metroLineOptions.map((line) => <button key={line.id} onClick={() => chooseMetroLine(line.id)}><i style={{ background: line.color, color: line.text }}>{line.id}</i><span><strong>{line.name}</strong><small>Платформа на станции {currentMetroLeg.from}</small></span><b>→</b></button>)}</div> : <div className="metro-choice-grid direction-choices">{[currentMetroLine.stations[0], currentMetroLine.stations[currentMetroLine.stations.length - 1]].map((direction) => <button key={direction} onClick={() => chooseMetroDirection(direction)}><i style={{ background: currentMetroLine.color, color: currentMetroLine.text }}>{metroSelectedLine}</i><span><strong>Direction {direction}</strong><small>{currentMetroLeg.stops} ост. до {currentMetroLeg.to}</small></span><b>→</b></button>)}</div>}
             <div className="metro-map-key"><span><i className="metro-symbol transfer" /> correspondance = пересадка</span><span><i className="metro-symbol exit" /> sortie = выход</span><p>Ошибиться можно: игра подскажет, почему выбранная платформа не подходит.</p></div>
@@ -2307,14 +2523,14 @@ export default function Home() {
           <div className="cycle-sky"><i className="cycle-sun" /><i className="cycle-moon" /><span className="cycle-cloud one" /><span className="cycle-cloud two" /></div>
           <div className="cycle-city"><i /><i /><i /><i /><i /></div>
           <div className="cycle-window-row"><i /><i /><i /><i /><i /><i /><i /><i /></div>
-          <section><p>{dayTransitionPhase === "dawn" ? `ДЕНЬ ${day} · 06:00` : `ДЕНЬ ${day} · ${dayTransitionPhase === "sunset" ? "ВЕЧЕР" : "НОЧЬ"}`}</p><h2>{dayTransitionPhase === "sunset" ? "Париж замедляется" : dayTransitionPhase === "night" ? "Город засыпает" : "Начинается новое утро"}</h2><span>{dayTransitionPhase === "dawn" ? "Скоро можно будет выбрать время подъёма." : dayTransitionText}</span><div className="cycle-progress"><i className={dayTransitionPhase === "sunset" || dayTransitionPhase === "night" || dayTransitionPhase === "dawn" ? "active" : ""} /><i className={dayTransitionPhase === "night" || dayTransitionPhase === "dawn" ? "active" : ""} /><i className={dayTransitionPhase === "dawn" ? "active" : ""} /></div></section>
+          <section><p>{currentWeekday.name.toUpperCase()} · {dayTransitionPhase === "dawn" ? `ДЕНЬ ${day} · 06:00` : `ДЕНЬ ${day} · ${dayTransitionPhase === "sunset" ? "ВЕЧЕР" : "НОЧЬ"}`}</p><h2>{dayTransitionPhase === "sunset" ? "Париж замедляется" : dayTransitionPhase === "night" ? "Город засыпает" : "Начинается новое утро"}</h2><span>{dayTransitionPhase === "dawn" ? `${currentWeekday.name}: ${currentWeekday.focus.toLowerCase()}. Сначала выбери время подъёма.` : dayTransitionText}</span><div className="cycle-progress"><i className={dayTransitionPhase === "sunset" || dayTransitionPhase === "night" || dayTransitionPhase === "dawn" ? "active" : ""} /><i className={dayTransitionPhase === "night" || dayTransitionPhase === "dawn" ? "active" : ""} /><i className={dayTransitionPhase === "dawn" ? "active" : ""} /></div></section>
         </div>
       )}
 
       {showEventReveal && (
         <div className="modal-backdrop event-reveal-backdrop">
           <section className="event-reveal-modal">
-            <div className={`event-poster event-poster-${currentCityEvent.period}`}><span>PARIS</span><i>{currentCityEvent.period === "evening" ? "☾" : "★"}</i><EventArtwork eventId={currentCityEvent.id} period={currentCityEvent.period} /><b>{getEventPeriodLabel(currentCityEvent.period)}<br />{day}</b></div>
+            <div className={`event-poster event-poster-${currentCityEvent.period}`}><span>PARIS</span><i>{currentCityEvent.period === "evening" ? "☾" : "★"}</i><EventArtwork eventId={currentCityEvent.id} period={currentCityEvent.period} /><b>{currentWeekday.short}<br />ДЕНЬ {day}</b></div>
             <div className="event-reveal-copy"><p className="eyebrow ink">{currentCityEvent.kicker}</p><h2>{currentCityEvent.title}</h2><p>{currentCityEvent.body}</p><div className="event-place"><span>ГДЕ И КОГДА</span><strong>{currentCityEventLocation.label}</strong><small>{currentCityEventLocation.district} · {cityEventWindow} · занимает {currentCityEvent.hours} ч.</small><em className={`event-status-line ${cityEventStatus}`}>{cityEventStatusText}</em></div><div className="event-reveal-actions"><button className="pixel-button primary" onClick={() => animateCloseWindow(() => setShowEventReveal(false))}>{cityEventStatus === "missed" ? "Событие уже прошло · начать день" : "Запомнить расписание и начать день"}</button><button className="event-map-link" disabled={cityEventStatus === "missed"} onClick={() => animateCloseWindow(() => { setShowEventReveal(false); setSideTab("event"); setViewMode("map"); })}>Показать на карте →</button></div></div>
           </section>
         </div>
@@ -2347,8 +2563,8 @@ export default function Home() {
       {!awake && !activeEvent && !activeDialogue && !dayTransitionPhase && tutorialStep < 0 && !pendingTravel && (
         <div className="modal-backdrop morning-backdrop">
           <section className="morning-modal">
-            <div className={`window-view sky-${sky}`}><div className="window-sun" /><div className="window-roofs" /><span>PARIS · ДЕНЬ {day}</span></div>
-            <div className="morning-copy"><p className="eyebrow ink">НОВОЕ УТРО</p><h2>Как начнётся день?</h2><p>Выбор времени влияет на запас сил и количество дел, которые ты успеешь.</p>
+            <div className={`window-view sky-${sky}`}><div className="window-sun" /><div className="window-roofs" /><span>PARIS · {currentWeekday.name.toUpperCase()} · ДЕНЬ {day}</span></div>
+            <div className="morning-copy"><p className="eyebrow ink">НЕДЕЛЯ {weekNumber} · {currentWeekday.french.toUpperCase()}</p><h2>Как начнётся {currentWeekday.name.toLowerCase()}?</h2><p>{currentWeekday.focus}. Сегодня в расписании {currentWeekday.duties.length} обязанности; выбор времени влияет на запас сил и количество дел.</p>
               <div className="wake-options">
                 <button onClick={() => animateCloseWindow(() => wakeUp(7, 22, "Ранний подъём"))}><b>07:00</b><span>Ранний подъём</span><small>+22 силы · длинный день</small></button>
                 <button onClick={() => animateCloseWindow(() => wakeUp(9, 32, "Спокойное утро"))}><b>09:00</b><span>Спокойное утро</span><small>+32 силы · баланс</small></button>
