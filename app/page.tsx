@@ -1208,7 +1208,7 @@ function formatEventWindow(event: CityEvent) {
 function PixelPortrait({ npc, small = false, unknown = false }: { npc: Npc; small?: boolean; unknown?: boolean }) {
   const preset = portraitPresets[npc.id] ?? { skin: "#dca47d", shadow: "#ad6b55", accent: "#e3bd68", hairStyle: "crop", face: "round" };
   return (
-    <div className={`pixel-portrait portrait-hair-${preset.hairStyle} portrait-face-${preset.face} ${small ? "is-small" : ""} ${unknown ? "is-unknown" : ""}`} style={{ "--shirt": npc.color, "--hair": npc.hair, "--skin": preset.skin, "--skin-shadow": preset.shadow, "--portrait-accent": preset.accent } as React.CSSProperties} aria-hidden="true">
+    <div className={`pixel-portrait portrait-npc-${npc.id} portrait-hair-${preset.hairStyle} portrait-face-${preset.face} ${small ? "is-small" : ""} ${unknown ? "is-unknown" : ""}`} style={{ "--shirt": npc.color, "--hair": npc.hair, "--skin": preset.skin, "--skin-shadow": preset.shadow, "--portrait-accent": preset.accent } as React.CSSProperties} aria-hidden="true">
       <div className="portrait-hair portrait-hair-back"><i /></div>
       <i className="portrait-ear left" /><i className="portrait-ear right" />
       <div className="portrait-face">
@@ -1408,6 +1408,7 @@ function LocationBackdrop({ location, sky }: { location: LocationDef; sky: strin
   const lookOffset = Math.max(0, locations.findIndex((item) => item.id === location.id)) * 2;
   return (
     <div className={`world-scene scene-${location.id} scene-time-${sky}`}>
+      <div className="scene-image-layer" aria-hidden="true" />
       <div className="world-sky"><i className="world-sun" /><i className="world-cloud cloud-a" /><i className="world-cloud cloud-b" /></div>
       <div className="world-building">
         <span className="set-piece set-one" /><span className="set-piece set-two" /><span className="set-piece set-three" /><span className="set-piece set-four" />
@@ -2232,7 +2233,8 @@ export default function Home() {
         <section className="title-card">
           <div className="tiny-flag"><i /><i /><i /></div>
           <p className="eyebrow">СИМУЛЯТОР НОВОЙ ЖИЗНИ</p>
-          <h1>PARIS,<br /><span>NOUVELLE VIE</span></h1>
+          <h1 className="title-accessible">PARIS,<br /><span>NOUVELLE VIE</span></h1>
+          <p className="title-chapter">CHAPITRE I · LE GRAND DÉPART</p>
           <p className="title-copy">Переезд — это не один билет. Это сотни маленьких решений, пять важных лет и город, который постепенно становится твоим.</p>
           <div className="title-actions">
             <button className="pixel-button primary" onClick={startFresh}>Новая история <span>→</span></button>
