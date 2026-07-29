@@ -709,7 +709,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--cinema-gold-lig
   background-size:180% 100%,100% 100%;background-position:100% 0,0 0;
   mix-blend-mode:screen;opacity:.35;animation:ambientWindowLight 13s ease-in-out infinite
 }
-@keyframes ambientWindowLight{0%,100%{background-position:100% 0,0 0;opacity:.24}48%{background-position:0 0,0 0;opacity:.48}70%{opacity:.31}}
+@keyframes ambientWindowLight{0%,100%{background-position:100% 0,0 0;opacity:var(--ambient-light-low,.24)}48%{background-position:0 0,0 0;opacity:var(--ambient-light-high,.48)}70%{opacity:var(--ambient-light-rest,.31)}}
 
 /* Three existing atmosphere nodes become location-aware motion accents. */
 .scene-atmosphere{overflow:hidden;opacity:.72!important}
@@ -827,3 +827,209 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--cinema-gold-lig
 .dialogue-spoken-text+.dialogue-narration-text{margin-top:.72em;margin-bottom:.08em}
 .dialogue-response-in .dialogue-narration-text{color:#6f695f}
 @media (max-width:760px){.dialogue-narration-text{font-size:clamp(12px,.7em,15px);line-height:1.55}}
+
+/* The painted source art is intentionally warm. These phase grades turn the
+   same scene into a readable morning, neutral day, sunset and night without
+   replacing the location or interrupting its ambient foreground animation. */
+.world-scene{
+  --scene-image-filter:saturate(1.05) contrast(1.04);
+  --scene-hue-grade:transparent;--scene-hue-opacity:0;--scene-hue-blend:hue;
+  --scene-light-grade:transparent;--scene-light-opacity:0;--scene-light-blend:screen;
+  --scene-final-grade:linear-gradient(180deg,rgba(3,12,27,.02) 45%,rgba(3,12,27,.45) 100%),radial-gradient(circle at 50% 42%,transparent 45%,rgba(2,9,20,.28) 100%);
+  --scene-final-blend:normal;--scene-final-opacity:1;
+  --ambient-window-grade:linear-gradient(108deg,transparent 18%,rgba(255,221,154,.055) 32%,transparent 47%),radial-gradient(ellipse at 74% 28%,rgba(255,216,137,.12),transparent 23%);
+  --ambient-light-low:.24;--ambient-light-high:.48;--ambient-light-rest:.31
+}
+.world-scene>.scene-image-layer{
+  isolation:isolate;filter:var(--scene-image-filter);
+  transition:filter 1.25s ease
+}
+.world-scene>.scene-image-layer:before,.world-scene>.scene-image-layer:after{
+  content:"";position:absolute;inset:0;display:block;pointer-events:none;
+  transition:opacity 1.25s ease
+}
+.world-scene>.scene-image-layer:before{
+  z-index:1;background:var(--scene-hue-grade);mix-blend-mode:var(--scene-hue-blend);opacity:var(--scene-hue-opacity)
+}
+.world-scene>.scene-image-layer:after{
+  z-index:2;background:var(--scene-light-grade);mix-blend-mode:var(--scene-light-blend);opacity:var(--scene-light-opacity)
+}
+.world-scene:before{
+  background:var(--ambient-window-grade);mix-blend-mode:screen
+}
+.world-scene:after{
+  background:var(--scene-final-grade);mix-blend-mode:var(--scene-final-blend);opacity:var(--scene-final-opacity)
+}
+
+.scene-time-dawn{
+  --scene-image-filter:brightness(.96) contrast(.96) saturate(.78);
+  --scene-hue-grade:linear-gradient(180deg,#6f86b2 0%,#a88cae 37%,rgba(218,147,143,.9) 64%,rgba(235,188,145,.36) 78%,transparent 93%);
+  --scene-hue-opacity:.46;
+  --scene-light-grade:radial-gradient(circle at 19% 48%,rgba(255,224,169,.66) 0 2%,rgba(255,203,142,.2) 4%,transparent 15%),linear-gradient(180deg,rgba(218,232,255,.12),rgba(255,218,178,.16) 72%,transparent);
+  --scene-light-opacity:.64;
+  --scene-final-grade:linear-gradient(180deg,rgba(91,103,155,.1),rgba(238,157,120,.06) 57%,rgba(4,13,27,.34)),radial-gradient(circle at 50% 42%,transparent 50%,rgba(13,21,43,.24));
+  --ambient-window-grade:linear-gradient(108deg,transparent 18%,rgba(255,203,158,.075) 32%,transparent 47%),radial-gradient(ellipse at 21% 46%,rgba(255,214,161,.14),transparent 27%);
+  --ambient-light-low:.17;--ambient-light-high:.34;--ambient-light-rest:.23
+}
+.scene-time-day{
+  --scene-image-filter:brightness(1.12) contrast(.9) saturate(.62);
+  --scene-hue-grade:linear-gradient(180deg,#58a9dd 0%,#77bce3 38%,rgba(143,198,224,.96) 61%,rgba(190,215,218,.5) 77%,transparent 92%);
+  --scene-hue-opacity:.88;
+  --scene-light-grade:radial-gradient(circle at 76% 15%,rgba(255,249,215,.95) 0 1.1%,rgba(255,246,205,.34) 2.2%,transparent 10%),linear-gradient(180deg,rgba(232,248,255,.26),rgba(255,255,244,.1) 62%,rgba(255,255,255,.08));
+  --scene-light-opacity:.72;
+  --scene-final-grade:linear-gradient(180deg,rgba(40,128,177,.055),transparent 56%,rgba(8,34,43,.13)),radial-gradient(circle at 50% 43%,transparent 57%,rgba(7,27,39,.12));
+  --ambient-window-grade:linear-gradient(108deg,transparent 18%,rgba(225,245,255,.06) 32%,transparent 47%),radial-gradient(ellipse at 76% 16%,rgba(255,249,215,.12),transparent 20%);
+  --ambient-light-low:.1;--ambient-light-high:.22;--ambient-light-rest:.14
+}
+.scene-time-sunset{
+  --scene-image-filter:brightness(1.02) contrast(1.03) saturate(1.04);
+  --scene-hue-opacity:0;
+  --scene-light-grade:radial-gradient(circle at 49% 61%,rgba(255,199,94,.2),transparent 24%);
+  --scene-light-opacity:.66;
+  --scene-final-grade:linear-gradient(180deg,rgba(226,92,65,.08),rgba(250,164,55,.13) 42%,rgba(31,16,31,.5));
+  --ambient-window-grade:linear-gradient(108deg,transparent 18%,rgba(255,204,117,.075) 32%,transparent 47%),radial-gradient(ellipse at 66% 31%,rgba(255,180,85,.15),transparent 25%);
+  --ambient-light-low:.25;--ambient-light-high:.5;--ambient-light-rest:.34
+}
+.scene-time-night{
+  --scene-image-filter:brightness(.48) contrast(1.1) saturate(.7);
+  --scene-hue-grade:linear-gradient(180deg,#102a55,rgba(25,54,88,.95) 56%,rgba(20,45,66,.72));
+  --scene-hue-opacity:.38;--scene-hue-blend:color;
+  --scene-light-grade:radial-gradient(circle at 14% 69%,rgba(255,191,91,.18),transparent 6%),radial-gradient(circle at 79% 67%,rgba(255,201,112,.16),transparent 7%),radial-gradient(circle at 52% 73%,rgba(255,188,83,.12),transparent 5%);
+  --scene-light-opacity:.7;
+  --scene-final-grade:linear-gradient(180deg,rgba(4,16,42,.38),rgba(2,10,29,.64)),radial-gradient(circle at 62% 19%,rgba(91,130,180,.11),transparent 35%);
+  --ambient-window-grade:linear-gradient(108deg,transparent 18%,rgba(99,144,194,.04) 32%,transparent 47%),radial-gradient(ellipse at 74% 28%,rgba(255,196,100,.13),transparent 18%);
+  --ambient-light-low:.13;--ambient-light-high:.3;--ambient-light-rest:.19
+}
+
+/* Interior scenes react mostly through window light and exposure. Keeping the
+   blue sky grade restrained preserves wood, skin and warm practical lamps. */
+.scene-time-day:is(.scene-home,.scene-cafe,.scene-sorbonne,.scene-prefecture){
+  --scene-image-filter:brightness(1.1) contrast(.92) saturate(.78);
+  --scene-hue-grade:linear-gradient(180deg,rgba(110,178,209,.9),rgba(205,226,226,.35));
+  --scene-hue-opacity:.16;--scene-hue-blend:soft-light;
+  --scene-light-grade:linear-gradient(118deg,rgba(229,247,255,.22),transparent 44%,rgba(255,251,229,.08));
+  --scene-light-opacity:.72;
+  --scene-final-grade:linear-gradient(180deg,rgba(33,107,145,.035),transparent 62%,rgba(5,24,35,.1))
+}
+.scene-time-dawn:is(.scene-home,.scene-cafe,.scene-sorbonne,.scene-prefecture){
+  --scene-image-filter:brightness(.98) contrast(.96) saturate(.84);
+  --scene-hue-opacity:.12;--scene-hue-blend:soft-light;
+  --scene-light-grade:linear-gradient(118deg,rgba(205,222,242,.12),rgba(255,206,166,.1) 42%,transparent 72%);
+  --scene-final-grade:linear-gradient(180deg,rgba(81,91,137,.07),transparent 58%,rgba(13,20,35,.18))
+}
+.scene-time-night:is(.scene-home,.scene-cafe,.scene-sorbonne,.scene-prefecture){
+  --scene-image-filter:brightness(.55) contrast(1.05) saturate(.76);
+  --scene-hue-opacity:.13;--scene-hue-blend:color;
+  --scene-light-grade:radial-gradient(circle at 22% 52%,rgba(255,196,101,.2),transparent 14%),radial-gradient(circle at 76% 48%,rgba(255,205,111,.17),transparent 16%);
+  --scene-light-opacity:.75;
+  --scene-final-grade:linear-gradient(180deg,rgba(4,17,38,.3),rgba(3,11,27,.55))
+}
+@media (prefers-reduced-motion:reduce){
+  .world-scene>.scene-image-layer,.world-scene>.scene-image-layer:before,.world-scene>.scene-image-layer:after{transition:none}
+}
+
+/* Readable Paris atlas: landmarks stay on their geographic anchors while
+   compact callouts are moved into deliberate, non-overlapping lanes. */
+.map-panel-v2{container-type:inline-size;container-name:paris-map}
+.map-panel-v2 .arrondissement-marker{
+  width:28px;height:23px;border:1px solid rgba(70,77,72,.34);border-radius:50%;clip-path:none;
+  background:rgba(235,223,190,.62);box-shadow:none;opacity:.7
+}
+.map-panel-v2 .arrondissement-marker:nth-child(even){background:rgba(218,204,170,.58)}
+.map-panel-v2 .arrondissement-marker b{font-size:9px;color:#596052}.map-panel-v2 .arrondissement-marker small{display:none}
+.map-panel-v2 .atlas-road{z-index:1;height:3px;border:0;background:rgba(139,122,88,.48);box-shadow:0 2px 0 rgba(255,249,223,.58)}
+.map-panel-v2 .atlas-road:after{inset:-3px 0;border-color:rgba(104,89,60,.16)}
+.map-panel-v2 .atlas-road span{top:-9px;background:rgba(238,226,192,.78);font-size:4px;opacity:.72}
+.map-panel-v2 .road-voltaire,.map-panel-v2 .road-magenta{display:none}
+.map-panel-v2 .atlas-park{z-index:1;opacity:.7;box-shadow:none}.map-panel-v2 .seine-map{z-index:3}
+.map-panel-v2 .map-location{
+  --callout-x:0px;--callout-y:62px;--leader-length:42px;--leader-angle:90deg;
+  width:64px;height:64px;min-height:64px;padding:0;overflow:visible;isolation:isolate;
+  transform:translate(-50%,-50%);transition:filter .18s;filter:drop-shadow(0 5px 6px rgba(30,36,40,.16))
+}
+.map-panel-v2 .map-location:before{
+  content:"";position:absolute;z-index:0;left:50%;top:50%;width:var(--leader-length);height:2px;
+  background:linear-gradient(90deg,#465266 0 calc(100% - 5px),transparent calc(100% - 5px));
+  border-bottom:1px solid rgba(247,235,202,.8);transform-origin:0 50%;transform:rotate(var(--leader-angle));pointer-events:none
+}
+.map-panel-v2 .map-location:after{
+  content:"";position:absolute;z-index:1;left:50%;top:50%;width:8px;height:8px;border-radius:50%;
+  background:#f6e8c4;border:2px solid #26364b;transform:translate(-50%,-50%);pointer-events:none
+}
+.map-panel-v2 .map-location .landmark{
+  position:absolute;z-index:2;left:50%;top:50%;margin:0;transform:translate(-50%,-50%) scale(.7);
+  transform-origin:50% 68%;filter:drop-shadow(3px 4px 0 rgba(38,49,62,.2));transition:transform .18s
+}
+.map-panel-v2 .map-location>span{
+  position:absolute;z-index:3;left:50%;top:50%;width:136px;max-width:none;min-height:0;padding:7px 9px;
+  transform:translate(calc(-50% + var(--callout-x)),calc(-50% + var(--callout-y)));
+  border-width:2px;text-align:left;box-shadow:3px 4px 0 rgba(39,48,58,.22);pointer-events:none
+}
+.map-panel-v2 .map-location>span>b{font-size:10px;line-height:1.12}.map-panel-v2 .map-location>span>small{font-size:6px;line-height:1.2}
+.map-panel-v2 .map-location:hover,.map-panel-v2 .map-location:focus-visible{transform:translate(-50%,-50%);filter:drop-shadow(0 7px 8px rgba(29,35,40,.28));outline:0}
+.map-panel-v2 .map-location:hover .landmark,.map-panel-v2 .map-location:focus-visible .landmark{transform:translate(-50%,-50%) scale(.78)}
+.map-panel-v2 .map-location:focus-visible>span{outline:4px solid #e2aa43;outline-offset:3px}
+.map-panel-v2 .map-location.active:after{background:#cf454b;border-color:#fff;box-shadow:0 0 0 3px #26364b}
+.map-panel-v2 .map-location.guided>span{box-shadow:0 0 0 3px rgba(216,163,66,.34),3px 4px 0 rgba(39,48,58,.22)}
+.map-panel-v2 .you-pin{z-index:5;right:auto;left:50%;top:-17px;translate:-50% 0;width:max-content}
+.map-panel-v2 .event-map-pin{z-index:6;top:auto;bottom:calc(100% + 13px)}
+
+.map-location-montmartre{--callout-x:-104px;--callout-y:18px;--leader-length:78px;--leader-angle:169deg}
+.map-location-cafe{--callout-x:101px;--callout-y:13px;--leader-length:75px;--leader-angle:8deg}
+.map-location-louvre{--callout-x:-105px;--callout-y:-20px;--leader-length:78px;--leader-angle:190deg}
+.map-location-prefecture{--callout-x:108px;--callout-y:-35px;--leader-length:81px;--leader-angle:-17deg}
+.map-location-notredame{--callout-x:111px;--callout-y:38px;--leader-length:84px;--leader-angle:19deg}
+.map-location-sorbonne{--callout-x:-105px;--callout-y:48px;--leader-length:81px;--leader-angle:155deg}
+.map-location-eiffel{--callout-x:-16px;--callout-y:69px;--leader-length:49px;--leader-angle:104deg}
+.map-location-home{--callout-x:105px;--callout-y:-18px;--leader-length:79px;--leader-angle:-10deg}
+
+@media (max-width:1280px){
+  .map-panel-v2 .map-location{transform:translate(-50%,-50%);filter:drop-shadow(0 4px 5px rgba(30,36,40,.14))}
+  .map-panel-v2 .map-location:hover{transform:translate(-50%,-50%)}
+  .map-panel-v2 .map-location>span{width:118px;padding:6px 7px}.map-panel-v2 .map-location>span>b{font-size:9px}.map-panel-v2 .map-location>span>small{font-size:5px}
+  .map-location-montmartre{--callout-x:-92px}.map-location-cafe{--callout-x:88px}.map-location-louvre{--callout-x:-91px}.map-location-prefecture{--callout-x:94px}.map-location-notredame{--callout-x:96px}.map-location-sorbonne{--callout-x:-91px}.map-location-home{--callout-x:91px}
+}
+@media (max-width:900px){
+  .map-panel-v2 .map-location{width:54px;height:54px;min-height:54px}
+  .map-panel-v2 .map-location .landmark{transform:translate(-50%,-50%) scale(.6)}
+  .map-panel-v2 .map-location:hover .landmark{transform:translate(-50%,-50%) scale(.67)}
+  .map-panel-v2 .map-location>span{width:108px}.map-panel-v2 .map-location>span>small{display:none}
+  .map-panel-v2 .arrondissement-marker{width:22px;height:19px}.map-panel-v2 .arrondissement-marker b{font-size:7px}
+  .map-panel-v2 .atlas-road span{display:none}
+}
+@media (max-width:720px){
+  .map-panel-v2 .map-location{transform:translate(-50%,-50%)}.map-panel-v2 .map-location:hover{transform:translate(-50%,-50%)}
+  .map-panel-v2 .map-location>span{width:92px;padding:5px 6px}.map-panel-v2 .map-location>span>b{font-size:8px}
+  .map-location-montmartre{--callout-x:-59px;--callout-y:31px;--leader-length:42px;--leader-angle:153deg}
+  .map-location-cafe{--callout-x:59px;--callout-y:28px;--leader-length:43px;--leader-angle:25deg}
+  .map-location-louvre{--callout-x:-57px;--callout-y:-35px;--leader-length:42px;--leader-angle:211deg}
+  .map-location-prefecture{--callout-x:61px;--callout-y:-34px;--leader-length:46px;--leader-angle:-28deg}
+  .map-location-notredame{--callout-x:57px;--callout-y:42px;--leader-length:45px;--leader-angle:36deg}
+  .map-location-sorbonne{--callout-x:-57px;--callout-y:45px;--leader-length:45px;--leader-angle:142deg}
+  .map-location-eiffel{--callout-x:-7px;--callout-y:61px;--leader-length:42px;--leader-angle:97deg}
+  .map-location-home{--callout-x:58px;--callout-y:-27px;--leader-length:43px;--leader-angle:-25deg}
+  .map-panel-v2 .map-legend{display:none}.map-panel-v2 .map-calendar-stamp{display:none}
+}
+@container paris-map (max-width:760px){
+  .map-panel-v2 .map-location{width:54px;height:54px;min-height:54px;transform:translate(-50%,-50%)}
+  .map-panel-v2 .map-location:hover,.map-panel-v2 .map-location:focus-visible{transform:translate(-50%,-50%)}
+  .map-panel-v2 .map-location .landmark{transform:translate(-50%,-50%) scale(.6)}
+  .map-panel-v2 .map-location:hover .landmark,.map-panel-v2 .map-location:focus-visible .landmark{transform:translate(-50%,-50%) scale(.67)}
+  .map-panel-v2 .map-location>span{width:108px;padding:6px 7px}.map-panel-v2 .map-location>span>b{font-size:9px}.map-panel-v2 .map-location>span>small{display:none}
+  .map-panel-v2 .arrondissement-marker{width:22px;height:19px}.map-panel-v2 .arrondissement-marker b{font-size:7px}.map-panel-v2 .atlas-road span{display:none}
+  .map-panel-v2 .map-calendar-stamp{display:none}.map-panel-v2 .map-legend{width:205px;padding:9px}.map-panel-v2 .map-legend p{display:none}
+}
+@container paris-map (max-width:560px){
+  .map-panel-v2 .map-location{width:52px;height:52px;min-height:52px}
+  .map-panel-v2 .map-location>span{width:92px;padding:5px 6px}.map-panel-v2 .map-location>span>b{font-size:8px}
+  .map-location-montmartre{--callout-x:-59px;--callout-y:31px;--leader-length:42px;--leader-angle:153deg}
+  .map-location-cafe{--callout-x:59px;--callout-y:28px;--leader-length:43px;--leader-angle:25deg}
+  .map-location-louvre{--callout-x:-57px;--callout-y:-35px;--leader-length:42px;--leader-angle:211deg}
+  .map-location-prefecture{--callout-x:61px;--callout-y:-34px;--leader-length:46px;--leader-angle:-28deg}
+  .map-location-notredame{--callout-x:57px;--callout-y:42px;--leader-length:45px;--leader-angle:36deg}
+  .map-location-sorbonne{--callout-x:-57px;--callout-y:45px;--leader-length:45px;--leader-angle:142deg}
+  .map-location-eiffel{--callout-x:-7px;--callout-y:61px;--leader-length:42px;--leader-angle:97deg}
+  .map-location-home{--callout-x:58px;--callout-y:-27px;--leader-length:43px;--leader-angle:-25deg}
+  .map-panel-v2 .map-legend,.map-panel-v2 .map-compass,.map-panel-v2 .map-scale{display:none}
+  .map-panel-v2 .map-topline{left:11px;right:11px;top:11px}.map-panel-v2 .map-name{font-size:25px}.map-panel-v2 .map-name span{font-size:6px}
+}

@@ -93,6 +93,8 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(page, /shuffleItems/);
   assert.match(page, /leaveCafeShiftEarly/);
   assert.match(page, /showCafeShiftLeaveConfirm/);
+  assert.match(page, /map-location-\$\{location\.id\}/);
+  assert.match(page, /Событие дня «\$\{currentCityEvent\.title\}»/);
   assert.match(page, /activeCafeShift\?: ActiveCafeShift/);
   assert.match(page, /DialogueLineText/);
   assert.match(page, /cafeShiftLeaveDialogRef/);
@@ -162,6 +164,12 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(css, /shiftGuestIdle/);
   assert.match(css, /cafe-shift-leave-dialog/);
   assert.match(css, /dialogue-narration-text/);
+  assert.match(css, /\.scene-time-dawn/);
+  assert.match(css, /\.scene-time-day/);
+  assert.match(css, /\.scene-time-sunset/);
+  assert.match(css, /\.scene-time-night/);
+  assert.match(css, /@container paris-map/);
+  assert.match(css, /\.map-location-montmartre/);
   const parsedMap = JSON.parse(metroMap);
   assert.equal(parsedMap.lines.length, 16);
   assert.ok(parsedMap.stations.length >= 300);
