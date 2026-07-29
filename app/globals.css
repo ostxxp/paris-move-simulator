@@ -697,3 +697,133 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--cinema-gold-lig
 }
 
 @media (prefers-reduced-motion:reduce){.dialogue-portrait-stage,.dialogue-portrait-glow,.dialogue-typewriter-caret,.dialogue-response-pause i{animation:none!important}.dialogue-choices{transition:none}}
+
+/* Ambient life and portrait alignment pass. The painted scene stays fixed;
+   only light, steam and foreground UI characters move. */
+.scene-image-layer{animation:none!important;transform:scale(1.035)}
+.world-scene:before{
+  content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:
+    linear-gradient(108deg,transparent 18%,rgba(255,221,154,.055) 32%,transparent 47%),
+    radial-gradient(ellipse at 74% 28%,rgba(255,216,137,.12),transparent 23%);
+  background-size:180% 100%,100% 100%;background-position:100% 0,0 0;
+  mix-blend-mode:screen;opacity:.35;animation:ambientWindowLight 13s ease-in-out infinite
+}
+@keyframes ambientWindowLight{0%,100%{background-position:100% 0,0 0;opacity:.24}48%{background-position:0 0,0 0;opacity:.48}70%{opacity:.31}}
+
+/* Three existing atmosphere nodes become location-aware motion accents. */
+.scene-atmosphere{overflow:hidden;opacity:.72!important}
+.scene-atmosphere i{width:6px!important;height:6px!important;box-shadow:0 0 11px rgba(255,191,91,.72)!important;animation:ambientMote 7.8s linear infinite!important;will-change:transform,opacity}
+.scene-atmosphere i:first-child{left:18%;top:66%}.scene-atmosphere i:nth-child(2){left:57%;top:48%;animation-delay:-2.4s!important}.scene-atmosphere i:nth-child(3){left:82%;top:72%;animation-delay:-5.1s!important}
+@keyframes ambientMote{0%{transform:translate3d(-5px,22px,0) scale(.7);opacity:0}18%{opacity:.62}65%{opacity:.42}100%{transform:translate3d(18px,-72px,0) scale(1.25);opacity:0}}
+.scene-cafe .scene-atmosphere i,.scene-home .scene-atmosphere i{
+  width:18px!important;height:62px!important;background:transparent!important;border-left:2px solid rgba(255,238,205,.32);border-radius:50%;box-shadow:none!important;
+  animation:ambientSteam 5.6s ease-out infinite!important
+}
+.scene-cafe .scene-atmosphere i:first-child{left:20%;top:58%}.scene-cafe .scene-atmosphere i:nth-child(2){left:52%;top:51%}.scene-cafe .scene-atmosphere i:nth-child(3){left:76%;top:55%}
+.scene-home .scene-atmosphere i:first-child{left:19%;top:64%}.scene-home .scene-atmosphere i:nth-child(2){left:69%;top:60%}.scene-home .scene-atmosphere i:nth-child(3){left:84%;top:69%}
+@keyframes ambientSteam{0%{transform:translate3d(0,18px,0) rotate(-6deg) scale(.7);opacity:0}24%{opacity:.46}68%{opacity:.26}100%{transform:translate3d(14px,-68px,0) rotate(13deg) scale(1.18);opacity:0}}
+.scene-eiffel .scene-atmosphere i,.scene-montmartre .scene-atmosphere i,.scene-notredame .scene-atmosphere i{
+  width:13px!important;height:6px!important;background:#cf9a4b!important;border-radius:70% 15% 70% 15%;box-shadow:none!important;
+  animation:ambientLeaf 8.5s linear infinite!important
+}
+@keyframes ambientLeaf{0%{transform:translate3d(-8vw,-12px,0) rotate(0);opacity:0}14%{opacity:.52}70%{opacity:.32}100%{transform:translate3d(28vw,88px,0) rotate(430deg);opacity:0}}
+
+/* Procedural portraits use one proportional coordinate system at every size.
+   This prevents glasses, ears and facial features drifting apart in shift cards. */
+.pixel-portrait{box-sizing:border-box;isolation:isolate;background-clip:padding-box}
+.pixel-portrait .portrait-hair{left:13%;top:7%;width:74%;height:49%;box-sizing:border-box}
+.pixel-portrait .portrait-ear{top:35%;width:10%;height:18%;box-sizing:border-box}
+.pixel-portrait .portrait-ear.left{left:16%}.pixel-portrait .portrait-ear.right{right:16%}
+.pixel-portrait .portrait-face{left:22%;top:22%;width:56%;height:46%;box-sizing:border-box}
+.pixel-portrait.portrait-face-long .portrait-face{left:24%;width:52%;height:49%}
+.pixel-portrait .portrait-face .eye{top:35%;width:clamp(3px,8%,6px);height:clamp(3px,8%,6px)}
+.pixel-portrait .portrait-face .eye.left{left:19%}.pixel-portrait .portrait-face .eye.right{right:19%}
+.pixel-portrait .portrait-brow{top:22%;height:5%}
+.pixel-portrait .portrait-nose{left:46%;top:48%;width:9%;height:17%}
+.pixel-portrait .portrait-mouth{left:35%;bottom:13%;width:30%;height:4%}
+.pixel-portrait .portrait-neck{left:38%;bottom:32%;width:24%;height:18%;box-sizing:border-box}
+.pixel-portrait .portrait-body{left:8%;bottom:-4%;width:84%;height:42%;box-sizing:border-box}
+.pixel-portrait .portrait-hair-front{left:20%;top:16%;width:60%;height:18%}
+.pixel-portrait .glasses{
+  position:absolute;z-index:8;left:8%;top:25%;width:31%;height:23%;box-sizing:border-box;border:2px solid #273140;box-shadow:none;background:transparent
+}
+.pixel-portrait .glasses:before,.pixel-portrait .glasses:after{content:"";position:absolute;display:block;box-sizing:border-box}
+.pixel-portrait .glasses:before{left:176%;top:-2px;width:100%;height:calc(100% + 4px);border:2px solid #273140;background:transparent}
+.pixel-portrait .glasses:after{left:100%;top:42%;width:77%;height:2px;background:#273140}
+.pixel-portrait.is-small .glasses,.pixel-portrait.is-small .glasses:before{border-width:1px}.pixel-portrait.is-small .glasses:before{top:-1px;height:calc(100% + 2px)}.pixel-portrait.is-small .glasses:after{height:1px}
+.pixel-portrait .moustache{left:29%;top:62%;width:42%;height:7%}
+.pixel-portrait.is-small .portrait-face .eye{width:3px;height:3px}
+
+/* Café shift: the current guest and queue are anchored to a shared visual floor. */
+.cafe-shift-scene{isolation:isolate}
+.cafe-shift-scene:before{
+  content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:
+    linear-gradient(112deg,transparent 22%,rgba(255,221,156,.13) 36%,transparent 50%),
+    radial-gradient(ellipse at 66% 45%,rgba(255,188,84,.1),transparent 28%);
+  background-size:190% 100%,100% 100%;mix-blend-mode:screen;opacity:.48;animation:cafeLightPass 10.5s ease-in-out infinite
+}
+@keyframes cafeLightPass{0%,100%{background-position:100% 0,0 0;opacity:.28}52%{background-position:0 0,0 0;opacity:.56}}
+.cafe-shift-scene:after{z-index:2;animation:cafeRoomBreathe 6.4s ease-in-out infinite}
+@keyframes cafeRoomBreathe{0%,100%{opacity:.82}50%{opacity:.67}}
+.shift-customer{z-index:7;left:43%;bottom:clamp(122px,22%,178px);gap:16px;transform:translateX(-50%);transform-origin:50% 100%}
+.shift-customer:before{content:"";position:absolute;z-index:-1;left:3%;bottom:-7px;width:148px;height:18px;border-radius:50%;background:rgba(4,12,22,.42);filter:blur(5px);animation:shiftGuestShadow 3.2s ease-in-out infinite}
+.shift-customer .pixel-portrait{width:132px!important;height:164px!important;border-width:3px!important;box-shadow:0 12px 25px rgba(0,0,0,.34)!important;animation:shiftGuestIdle 3.2s ease-in-out infinite;transform-origin:50% 100%}
+.shift-customer>div:last-child{min-width:128px;animation:shiftGuestLabel 3.2s ease-in-out infinite}
+@keyframes shiftGuestIdle{0%,100%{transform:translateY(0) rotate(0)}38%{transform:translateY(-4px) rotate(-.35deg)}68%{transform:translateY(-1px) rotate(.25deg)}}
+@keyframes shiftGuestLabel{0%,100%{transform:translateY(0)}42%{transform:translateY(-2px)}}
+@keyframes shiftGuestShadow{0%,100%{transform:scaleX(1);opacity:.62}42%{transform:scaleX(.91);opacity:.46}}
+.shift-queue{z-index:7;right:24px;bottom:24px;align-items:flex-end;gap:7px;padding:8px 9px 7px;border:1px solid rgba(226,174,76,.46);background:rgba(5,20,37,.58);box-shadow:0 8px 22px rgba(0,0,0,.25);backdrop-filter:blur(8px)}
+.shift-queue:before{right:8px;bottom:calc(100% + 7px);font-size:7px;text-shadow:0 2px 7px #000}
+.shift-queue .pixel-portrait{width:50px!important;height:64px!important;border:2px solid #d5a34a!important;box-shadow:0 7px 12px rgba(0,0,0,.32)!important;transform-origin:50% 100%;animation:shiftQueueIdle 2.7s ease-in-out infinite}
+.shift-queue .pixel-portrait:nth-child(2){animation-delay:-.65s}.shift-queue .pixel-portrait:nth-child(3){animation-delay:-1.25s}.shift-queue .pixel-portrait:nth-child(4){animation-delay:-1.9s}
+@keyframes shiftQueueIdle{0%,100%{transform:translateY(0)}44%{transform:translateY(-3px)}58%{transform:translateY(-1px)}}
+.shift-steam{display:block;z-index:5;right:auto;left:18%;bottom:23%;width:62px;height:92px;opacity:.62;pointer-events:none}
+.shift-steam i{position:absolute;display:block;bottom:0;width:16px;height:62px;border-left:2px solid rgba(255,241,209,.44);filter:blur(.3px);animation:shiftSteamNatural 3.9s ease-out infinite}
+.shift-steam i:nth-child(2){left:18px;animation-delay:-1.25s}.shift-steam i:nth-child(3){left:37px;animation-delay:-2.45s}
+@keyframes shiftSteamNatural{0%{transform:translate3d(0,15px,0) rotate(-8deg) scale(.65);opacity:0}25%{opacity:.62}100%{transform:translate3d(14px,-68px,0) rotate(14deg) scale(1.22);opacity:0}}
+
+/* One restrained passer-by per public location brings the painted crowd to life. */
+.world-scene>.scene-population{display:block!important;z-index:3}.world-scene>.scene-population .scene-extra{display:none;opacity:.78;filter:saturate(.78) brightness(.9) drop-shadow(0 6px 7px rgba(3,12,24,.32))}
+.scene-cafe .scene-population .extra-3,.scene-sorbonne .scene-population .extra-3,.scene-prefecture .scene-population .extra-2,.scene-louvre .scene-population .extra-5,.scene-eiffel .scene-population .extra-5,.scene-montmartre .scene-population .extra-3,.scene-notredame .scene-population .extra-3{display:block;left:-86px;right:auto;bottom:5%;z-index:3!important;animation:ambientPatronCross 18s linear infinite;will-change:transform}
+.scene-sorbonne .scene-population .extra-3{animation-duration:22s;animation-delay:-7s}.scene-prefecture .scene-population .extra-2{animation-duration:24s;animation-delay:-13s}.scene-louvre .scene-population .extra-5{animation-duration:20s;animation-delay:-4s}.scene-eiffel .scene-population .extra-5{animation-duration:17s;animation-delay:-9s}.scene-montmartre .scene-population .extra-3{animation-duration:21s;animation-delay:-12s}.scene-notredame .scene-population .extra-3{animation-duration:19s;animation-delay:-6s}
+.world-scene>.scene-population .scene-extra .extra-figure{animation:ambientPatronStep .82s ease-in-out infinite}.world-scene>.scene-population .scene-extra .extra-leg.left{animation:ambientPatronLegA .82s ease-in-out infinite;transform-origin:top}.world-scene>.scene-population .scene-extra .extra-leg.right{animation:ambientPatronLegB .82s ease-in-out infinite;transform-origin:top}
+@keyframes ambientPatronCross{0%{transform:translate3d(0,0,0) scale(.78);opacity:0}5%{opacity:.78}92%{opacity:.78}100%{transform:translate3d(82vw,0,0) scale(.78);opacity:0}}
+@keyframes ambientPatronStep{50%{transform:translateY(-3px) rotate(.25deg)}}@keyframes ambientPatronLegA{0%,100%{transform:rotate(12deg)}50%{transform:rotate(-12deg)}}@keyframes ambientPatronLegB{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}
+
+/* Leaving a shift is possible, but the consequences are explicit. */
+.cafe-shift-header-actions{display:flex;align-items:center;gap:18px}.cafe-shift-header-actions .shift-score{min-width:82px}
+.cafe-shift-leave-button{
+  display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 14px;border:1px solid rgba(244,204,128,.65);background:rgba(112,36,45,.54);color:#fff0d6;font:800 9px/1.25 var(--font-pixel);letter-spacing:.04em;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.24);transition:background .2s,transform .2s,border-color .2s
+}
+.cafe-shift-leave-button:hover:not(:disabled){background:#9f3f49;border-color:#ffd28a;transform:translateY(-2px)}.cafe-shift-leave-button:disabled{opacity:.5;cursor:default}
+.cafe-shift-screen.is-leave-confirming{filter:saturate(.65) brightness(.76)}
+.cafe-shift-leave-backdrop{position:fixed;inset:0;z-index:92;display:grid;place-items:center;padding:20px;background:rgba(2,10,21,.8);backdrop-filter:blur(8px);animation:cafeQuitFade .22s ease-out}
+.cafe-shift-leave-dialog{position:relative;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:clamp(28px,4vw,44px);background:linear-gradient(145deg,#f8eccf,#d8c198);color:#19283c;border:2px solid #e1aa46;border-left-width:6px;box-shadow:0 28px 80px rgba(0,0,0,.58),inset 0 0 0 4px rgba(255,248,221,.38);animation:cafeQuitLift .28s cubic-bezier(.2,.85,.24,1)}
+.cafe-shift-leave-close{position:absolute;right:15px;top:15px;display:grid;place-items:center;width:38px;height:38px;border:2px solid #27364c;background:#fff5df;color:#19283c;font-size:24px;cursor:pointer}
+.cafe-shift-leave-kicker{margin:0 52px 8px 0;color:#a63f47;font:900 9px/1.4 var(--font-pixel);letter-spacing:.12em}.cafe-shift-leave-dialog h2{margin:8px 45px 12px 0;font:700 clamp(27px,4vw,40px)/1.08 Georgia,serif}.cafe-shift-leave-dialog>p:not(.cafe-shift-leave-kicker){font:16px/1.5 Georgia,serif;color:#5e5d58}
+.cafe-shift-leave-penalties{display:grid;gap:8px;margin:20px 0;padding:0;list-style:none}.cafe-shift-leave-penalties li{display:grid;grid-template-columns:minmax(110px,.65fr) minmax(0,1fr);gap:10px;padding:11px 13px;border-left:5px solid #b64049;background:rgba(171,66,66,.1)}.cafe-shift-leave-penalties span{color:#8a3a40;font:900 8px/1.4 var(--font-pixel)}.cafe-shift-leave-penalties strong{font:700 15px/1.35 Georgia,serif;overflow-wrap:anywhere}
+.cafe-shift-leave-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}.cafe-shift-leave-actions button{min-height:52px;padding:11px;border:2px solid #27364c;font:800 9px/1.35 var(--font-pixel);cursor:pointer}.cafe-shift-leave-cancel{background:#193651;color:#fff0d5}.cafe-shift-leave-confirm{background:#b53f48;color:#fff;border-color:#8e3038!important}
+@keyframes cafeQuitFade{from{opacity:0}}@keyframes cafeQuitLift{from{opacity:0;transform:translateY(18px) scale(.97)}}
+
+@media (max-width:760px){
+  .shift-customer{left:41%;bottom:118px;gap:9px}.shift-customer .pixel-portrait{width:104px!important;height:130px!important}.shift-customer>div:last-child{min-width:102px;padding:8px 9px}.shift-customer strong{font-size:19px}.shift-queue{right:12px;bottom:16px;padding:6px}.shift-queue .pixel-portrait{width:42px!important;height:53px!important}.shift-steam{left:12%;bottom:25%}
+  .cafe-shift-header-actions{gap:8px}.cafe-shift-header-actions .shift-score{min-width:56px}.cafe-shift-leave-button{min-height:36px;padding:8px 10px;font-size:8px}.cafe-shift-leave-actions{grid-template-columns:1fr}.cafe-shift-leave-dialog{padding:25px 20px}.cafe-shift-leave-penalties li{grid-template-columns:1fr;gap:3px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .world-scene:before,.scene-atmosphere i,.cafe-shift-scene:before,.cafe-shift-scene:after,.shift-customer:before,.shift-customer .pixel-portrait,.shift-customer>div:last-child,.shift-queue .pixel-portrait,.shift-steam i,.cafe-shift-leave-backdrop,.cafe-shift-leave-dialog{animation:none!important}
+  .world-scene>.scene-population{display:none!important}
+  .cafe-shift-leave-button{transition:none}.cafe-shift-leave-button:hover{transform:none}
+}
+
+/* Literary stage directions stay subordinate to the character's spoken line. */
+.dialogue-rich-line{display:inline;color:inherit}
+.dialogue-spoken-text{font:inherit;font-style:normal;color:inherit}
+.dialogue-narration-text{
+  display:block;margin:.08em 0 .62em;font-size:clamp(12px,.66em,17px);font-style:italic;font-weight:400;line-height:1.62;letter-spacing:.012em;color:#756f64
+}
+.dialogue-spoken-text+.dialogue-narration-text{margin-top:.72em;margin-bottom:.08em}
+.dialogue-response-in .dialogue-narration-text{color:#6f695f}
+@media (max-width:760px){.dialogue-narration-text{font-size:clamp(12px,.7em,15px);line-height:1.55}}

@@ -298,6 +298,8 @@ type SavedGame = {
   npcAssignments?: Record<string, NpcAssignment>;
   completedActionIds?: string[];
   recentCafeOrderIds?: string[];
+  activeCafeShift?: ActiveCafeShift | null;
+  cafeShiftFeedback?: { correct: boolean; text: string } | null;
 };
 
 const STORAGE_KEY = "paris-nouvelle-vie-save-v1";
@@ -381,6 +383,18 @@ const portraitPresets: Record<string, PortraitPreset> = {
   nora: { skin: "#b97958", shadow: "#8c503f", accent: "#8bc08a", hairStyle: "waves", face: "round" },
   etienne: { skin: "#d6a079", shadow: "#aa6852", accent: "#ae91c7", hairStyle: "side", face: "square" },
   fatou: { skin: "#7d4935", shadow: "#5c3229", accent: "#e28a61", hairStyle: "bun", face: "round" },
+  rachid: { skin: "#b97655", shadow: "#8d4c3d", accent: "#d8aa53", hairStyle: "crop", face: "square" },
+  chloe: { skin: "#dfaa86", shadow: "#b46f59", accent: "#d897a3", hairStyle: "waves", face: "long" },
+  alain: { skin: "#d09b77", shadow: "#a36350", accent: "#8fa9bf", hairStyle: "side", face: "square" },
+  sofia: { skin: "#c88465", shadow: "#985441", accent: "#b5a1d5", hairStyle: "bob", face: "long" },
+  marc: { skin: "#e0ad88", shadow: "#b6765d", accent: "#7ba46f", hairStyle: "crop", face: "round" },
+  elodie: { skin: "#edc09e", shadow: "#c48971", accent: "#d8bf91", hairStyle: "bun", face: "long" },
+  gabriel: { skin: "#b97858", shadow: "#8e4d3e", accent: "#7898c5", hairStyle: "side", face: "square" },
+  zoe: { skin: "#dda681", shadow: "#b16d57", accent: "#b884a2", hairStyle: "waves", face: "round" },
+  idris: { skin: "#8d543f", shadow: "#68372e", accent: "#66a1aa", hairStyle: "crop", face: "long" },
+  pauline: { skin: "#e4b08b", shadow: "#ba7a63", accent: "#d77b68", hairStyle: "bob", face: "round" },
+  ana: { skin: "#c98767", shadow: "#9b5847", accent: "#9c92cf", hairStyle: "bun", face: "long" },
+  omar: { skin: "#9d6248", shadow: "#754034", accent: "#73a18d", hairStyle: "curls", face: "square" },
 };
 
 const ambientLooks = [
@@ -1323,6 +1337,22 @@ function formatEventWindow(event: CityEvent) {
   return `${formatTime(event.startHour)}–${formatTime(event.endHour)}`;
 }
 
+function DialogueLineText({ text, source = text }: { text: string; source?: string }) {
+  if (!source.includes("«")) return <span className="dialogue-spoken-text">{text}</span>;
+  const parts = text.split(/(«|»)/);
+  return (
+    <span className="dialogue-rich-line">
+      {parts.map((part, index) => {
+        if (!part) return null;
+        const previousParts = parts.slice(0, index);
+        const insideSpeech = previousParts.lastIndexOf("«") > previousParts.lastIndexOf("»");
+        if (part === "«" || part === "»") return <span className="dialogue-spoken-text" key={`${index}-quote`}>{part}</span>;
+        return <span className={insideSpeech ? "dialogue-spoken-text" : "dialogue-narration-text"} key={index}>{part}</span>;
+      })}
+    </span>
+  );
+}
+
 function PixelPortrait({ npc, small = false, unknown = false }: { npc: Npc; small?: boolean; unknown?: boolean }) {
   const preset = portraitPresets[npc.id] ?? { skin: "#dca47d", shadow: "#ad6b55", accent: "#e3bd68", hairStyle: "crop", face: "round" };
   return (
@@ -1747,6 +1777,11 @@ export default function Home() {
   const [actionProgress, setActionProgress] = useState(0);
   const [activeCafeShift, setActiveCafeShift] = useState<ActiveCafeShift | null>(null);
   const [cafeShiftFeedback, setCafeShiftFeedback] = useState<{ correct: boolean; text: string } | null>(null);
+  const [showCafeShiftLeaveConfirm, setShowCafeShiftLeaveConfirm] = useState(false);
+  const cafeShiftLeaveButtonRef = useRef<HTMLButtonElement>(null);
+  const cafeShiftLeaveDialogRef = useRef<HTMLElement>(null);
+  const restoreCafeShiftLeaveFocusRef = useRef(false);
+  const cafeShiftWasActiveRef = useRef(false);
   const [recentCafeOrderIds, setRecentCafeOrderIds] = useState<string[]>([]);
   const [closingWindow, setClosingWindow] = useState(false);
   const [showEventReveal, setShowEventReveal] = useState(false);
@@ -1811,6 +1846,8 @@ export default function Home() {
   const activeActivityKind = activeAction ? getActivityKind(activeAction.action.id) : null;
   const activeActivityScene = activeAction ? getActivityScene(activeAction.action.id, actionProgress) : null;
   const currentCafeOrder = activeCafeShift ? activeCafeShift.orders[activeCafeShift.index] : null;
+  const cafeShiftStartedGuests = activeCafeShift ? Math.max(1, activeCafeShift.index + 1) : 0;
+  const cafeShiftLeaveMinutes = Math.max(30, cafeShiftStartedGuests * 30);
   const remainingDayHours = Math.max(0, 24 - time);
   const cityEventLatestStart = currentCityEvent.endHour - currentCityEvent.hours;
   const cityEventStatus: "done" | "upcoming" | "open" | "missed" = cityEventDone ? "done" : time < currentCityEvent.startHour ? "upcoming" : time <= cityEventLatestStart ? "open" : "missed";
@@ -1853,15 +1890,73 @@ export default function Home() {
 
   useEffect(() => {
     if (phase !== "game" || !profile.name) return;
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments, recentCafeOrderIds };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments, recentCafeOrderIds, activeCafeShift, cafeShiftFeedback };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
-  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments, recentCafeOrderIds]);
+  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments, recentCafeOrderIds, activeCafeShift, cafeShiftFeedback]);
 
   useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(""), 2800);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    const shiftBecameActive = !!activeCafeShift && !cafeShiftWasActiveRef.current;
+    cafeShiftWasActiveRef.current = !!activeCafeShift;
+    if (!activeCafeShift) {
+      restoreCafeShiftLeaveFocusRef.current = false;
+      return;
+    }
+    if (showCafeShiftLeaveConfirm || (!shiftBecameActive && !restoreCafeShiftLeaveFocusRef.current)) return;
+    restoreCafeShiftLeaveFocusRef.current = false;
+    const frame = window.requestAnimationFrame(() => cafeShiftLeaveButtonRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeCafeShift, showCafeShiftLeaveConfirm]);
+
+  useEffect(() => {
+    if (!showCafeShiftLeaveConfirm) return;
+    restoreCafeShiftLeaveFocusRef.current = true;
+    const dialog = cafeShiftLeaveDialogRef.current;
+    const focusableSelector = "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+    const focusSafeAction = () => {
+      const safeAction = dialog?.querySelector<HTMLElement>(".cafe-shift-leave-cancel");
+      const firstFocusable = dialog?.querySelector<HTMLElement>(focusableSelector);
+      (safeAction ?? firstFocusable ?? dialog)?.focus();
+    };
+    const frame = window.requestAnimationFrame(focusSafeAction);
+    const trapCafeShiftLeaveFocus = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setShowCafeShiftLeaveConfirm(false);
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const focused = document.activeElement;
+      if (!dialog.contains(focused)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && focused === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && focused === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", trapCafeShiftLeaveFocus, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", trapCafeShiftLeaveFocus, true);
+    };
+  }, [showCafeShiftLeaveConfirm]);
 
   useEffect(() => {
     if (!activeDialogue || !activeDialogueMission || dialogueStage === "intro") return;
@@ -2007,7 +2102,7 @@ export default function Home() {
     setCompletedDailyTaskIds([]); setCompletedActionIds([]); setChapterProgressPoints(0); setNpcDialogueProgress({}); setRelationships({}); setNpcAssignments({}); setRecentCafeOrderIds([]);
     setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setActiveDialogueIndex(0); setDialogueRoundIndex(0); setDialogueTurnPhase("prompt"); setDialogueVisibleText(""); setDialogueTextComplete(false); dialogueTypingSkipRef.current = false; setDialogueTranscript([]); setDialoguePendingEffects({}); setDialoguePendingRelationship(0); setDialogueElapsedMinutes(0); setShowAchievements(false); setShowGameMenu(false);
     setStatsExpanded(false); setStoryExpanded(false); setSideTab("actions");
-    setMetroTrip(null); setActiveTravel(null); setTravelProgress(0); setActiveAction(null); setActionProgress(0); setActiveCafeShift(null); setCafeShiftFeedback(null); setClosingWindow(false); setShowEventReveal(false); setDayTransitionPhase(null);
+    setMetroTrip(null); setActiveTravel(null); setTravelProgress(0); setActiveAction(null); setActionProgress(0); setActiveCafeShift(null); setCafeShiftFeedback(null); setShowCafeShiftLeaveConfirm(false); setClosingWindow(false); setShowEventReveal(false); setDayTransitionPhase(null);
     setViewMode("scene"); setPendingTravel(null); setTutorialStep(0);
     setJournal([`${profile.name} начинает путь «${selectedRoute.label}».`, "Ты прибыл в Париж. Всё только начинается."]);
     setPhase("game");
@@ -2022,7 +2117,7 @@ export default function Home() {
     setVisitedLocations(savedGame.visitedLocations ?? [savedGame.locationId]); setCompletedCityEvents(savedGame.completedCityEvents ?? []);
     setCompletedDailyTaskIds(savedGame.completedDailyTaskIds ?? []); setCompletedActionIds(savedGame.completedActionIds ?? []); setChapterProgressPoints(savedGame.chapterProgressPoints ?? 0);
     setNpcDialogueProgress(savedGame.npcDialogueProgress ?? {}); setRelationships(savedGame.relationships ?? {}); setNpcAssignments(savedGame.npcAssignments ?? {}); setRecentCafeOrderIds(savedGame.recentCafeOrderIds ?? []);
-    setAwake(true); setViewMode("scene"); setTutorialStep(-1); setSideTab("actions"); setActiveAction(null); setActiveCafeShift(null); setCafeShiftFeedback(null); setClosingWindow(false); setShowEventReveal(false); setPhase("game");
+    setAwake(true); setViewMode("scene"); setTutorialStep(-1); setSideTab("actions"); setActiveAction(null); setActiveCafeShift(savedGame.activeCafeShift ?? null); setCafeShiftFeedback(savedGame.cafeShiftFeedback ?? null); setShowCafeShiftLeaveConfirm(false); setClosingWindow(false); setShowEventReveal(false); setPhase("game");
   };
 
   const startFresh = () => {
@@ -2031,7 +2126,7 @@ export default function Home() {
   };
 
   const exitToTitle = () => {
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments, recentCafeOrderIds };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments, recentCafeOrderIds, activeCafeShift, cafeShiftFeedback };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
     setSavedGame(save);
     setPhase("intro");
@@ -2060,6 +2155,10 @@ export default function Home() {
   };
 
   const finishDay = () => {
+    if (activeCafeShift) {
+      setToast("Сначала закончи смену или покинь её со штрафом.");
+      return;
+    }
     if (dayTransitionPhase) return;
     const missed = currentWeekday.duties.filter((duty) => !isDutyDone(duty));
     addJournal(allDutiesDone
@@ -2133,8 +2232,8 @@ export default function Home() {
         ? shuffleItems(unseenOrders)
         : [...shuffleItems(unseenOrders), ...shuffleItems(seenOrders)];
       const orders = orderCandidates.slice(0, 5).map((order) => ({ ...order, choices: shuffleItems(order.choices) }));
-      setRecentCafeOrderIds((ids) => [...ids, ...orders.map((order) => order.id)].slice(-15));
       setCafeShiftFeedback(null);
+      setShowCafeShiftLeaveConfirm(false);
       setActiveCafeShift({ action, locationId: actionLocation.id, startTime: actionStart, orders, index: 0, correct: 0 });
       return;
     }
@@ -2160,14 +2259,34 @@ export default function Home() {
     if (activeCafeShift.index >= activeCafeShift.orders.length - 1) {
       const location = locations.find((item) => item.id === activeCafeShift.locationId) ?? locations[0];
       const score = activeCafeShift.correct;
+      const finishedOrderIds = activeCafeShift.orders.map((order) => order.id);
+      setRecentCafeOrderIds((ids) => [...ids.filter((id) => !finishedOrderIds.includes(id)), ...finishedOrderIds].slice(-15));
       completePerformedAction(activeCafeShift.action, location, activeCafeShift.startTime, { french: score, assimilation: score >= 4 ? 2 : 0 });
       setActiveCafeShift(null);
       setCafeShiftFeedback(null);
+      setShowCafeShiftLeaveConfirm(false);
       setToast(`Смена закрыта: ${score}/${activeCafeShift.orders.length} заказов без ошибки · французский +${4 + score}`);
       return;
     }
     setActiveCafeShift((shift) => shift ? { ...shift, index: shift.index + 1 } : shift);
     setCafeShiftFeedback(null);
+  };
+
+  const leaveCafeShiftEarly = () => {
+    if (!activeCafeShift) return;
+    const startedGuests = Math.max(1, activeCafeShift.index + 1);
+    const elapsedMinutes = Math.max(30, startedGuests * 30);
+    const endTime = Math.min(23.95, activeCafeShift.startTime + elapsedMinutes / 60);
+    const seenOrderIds = activeCafeShift.orders.slice(0, startedGuests).map((order) => order.id);
+    setStats((current) => applyEffects(current, { money: -20, stability: -4, energy: -4 }));
+    setRelationships((values) => ({ ...values, malik: Math.max(0, (values.malik ?? 0) - 8) }));
+    setRecentCafeOrderIds((ids) => [...ids.filter((id) => !seenOrderIds.includes(id)), ...seenOrderIds].slice(-15));
+    setTime(endTime);
+    addJournal(`${formatTime(activeCafeShift.startTime)} · Café des Amis: смена прервана после ${startedGuests} ${startedGuests === 1 ? "гостя" : "гостей"}. Зарплата 0 €; смена заняла ${elapsedMinutes} мин. Штраф: −20 €, −4 силы, −4 опоры, −8 отношений с Маликом.`);
+    setActiveCafeShift(null);
+    setCafeShiftFeedback(null);
+    setShowCafeShiftLeaveConfirm(false);
+    setToast(`Смена прервана: 0 € зарплаты · −20 € · силы/опора −4 · Малик −8 · ${elapsedMinutes} мин.`);
   };
 
   const travelTo = (id: string) => {
@@ -2568,13 +2687,13 @@ export default function Home() {
 
   return (
     <main className={`game-shell sky-${sky} ${closingWindow ? "closing-window" : ""}`}>
-      <header className="game-header">
+      <header className="game-header" aria-hidden={!!activeCafeShift || undefined} inert={!!activeCafeShift || undefined}>
         <div className="brand-mini"><span className="mini-tower">A</span><div><strong>PARIS, NOUVELLE VIE</strong><small>{selectedRoute.subtitle}</small></div></div>
         <div className="time-block"><span>ГЛАВА {year}/5 · НЕДЕЛЯ {weekNumber}</span><strong>{formatTime(time)}</strong><em>{currentWeekday.name} · день {day} · {sky === "night" ? "ночь" : sky === "sunset" ? "закат" : sky === "dawn" ? "рассвет" : "день"}</em></div>
-        <div className="header-actions"><button className={viewMode === "map" ? "active" : ""} onClick={() => setViewMode(viewMode === "map" ? "scene" : "map")}>⌖ {viewMode === "map" ? "Вернуться" : "Карта"}</button><button onClick={() => setShowGameMenu(true)}>☰ Меню</button></div>
+        <div className="header-actions"><button disabled={!!activeCafeShift} className={viewMode === "map" ? "active" : ""} onClick={() => { if (!activeCafeShift) setViewMode(viewMode === "map" ? "scene" : "map"); }}>⌖ {viewMode === "map" ? "Вернуться" : "Карта"}</button><button disabled={!!activeCafeShift} onClick={() => { if (!activeCafeShift) setShowGameMenu(true); }}>☰ Меню</button></div>
       </header>
 
-      <div className="game-layout">
+      <div className="game-layout" aria-hidden={!!activeCafeShift || undefined} inert={!!activeCafeShift || undefined}>
         <aside className="left-panel pixel-panel">
           <div className="player-card"><div className="player-avatar small"><span className="player-hair" /><span className="player-face" /><span className="player-body" /></div><div><strong>{profile.name}</strong><small>{profile.age} лет · глава {year}/5</small></div></div>
           <div className="stats-list">
@@ -2664,7 +2783,7 @@ export default function Home() {
         </aside>
       </div>
 
-      <footer className="game-footer"><span><b>{chapter.episode}</b> · ежедневные дела, диалоги и события меняют твою историю</span><div>{npcs.map((npc) => <span key={npc.id} title={npc.name} className={metNpcs.includes(npc.id) ? "met" : ""}><PixelPortrait npc={npc} small unknown={!metNpcs.includes(npc.id)} /></span>)}</div></footer>
+      <footer className="game-footer" aria-hidden={!!activeCafeShift || undefined} inert={!!activeCafeShift || undefined}><span><b>{chapter.episode}</b> · ежедневные дела, диалоги и события меняют твою историю</span><div>{npcs.map((npc) => <span key={npc.id} title={npc.name} className={metNpcs.includes(npc.id) ? "met" : ""}><PixelPortrait npc={npc} small unknown={!metNpcs.includes(npc.id)} /></span>)}</div></footer>
 
       {pendingTravel && (
         <div className="modal-backdrop travel-backdrop">
@@ -2716,8 +2835,9 @@ export default function Home() {
       )}
 
       {activeCafeShift && currentCafeOrder && (
-        <div className="cafe-shift-screen">
-          <header className="cafe-shift-header"><div><span>CAFÉ DES AMIS · СМЕНА</span><h2>Заказы на французском</h2></div><div className="shift-score"><span>БЕЗ ОШИБКИ</span><strong>{activeCafeShift.correct}/{activeCafeShift.orders.length}</strong></div></header>
+        <>
+        <div className={`cafe-shift-screen ${showCafeShiftLeaveConfirm ? "is-leave-confirming" : ""}`} aria-hidden={showCafeShiftLeaveConfirm || undefined} inert={showCafeShiftLeaveConfirm || undefined}>
+          <header className="cafe-shift-header"><div><span>CAFÉ DES AMIS · СМЕНА</span><h2>Заказы на французском</h2></div><div className="cafe-shift-header-actions"><div className="shift-score"><span>БЕЗ ОШИБКИ</span><strong>{activeCafeShift.correct}/{activeCafeShift.orders.length}</strong></div><button ref={cafeShiftLeaveButtonRef} type="button" className="cafe-shift-leave-button" disabled={showCafeShiftLeaveConfirm} onClick={() => setShowCafeShiftLeaveConfirm(true)} aria-label="Покинуть смену досрочно и посмотреть штрафы">Покинуть смену</button></div></header>
           <div className="cafe-shift-progress">{activeCafeShift.orders.map((order, index) => <i key={order.id} className={`${index < activeCafeShift.index ? "done" : ""} ${index === activeCafeShift.index ? "active" : ""}`}>{index < activeCafeShift.index ? "✓" : index + 1}</i>)}</div>
           <div className="cafe-shift-layout">
             <section className="cafe-shift-scene">
@@ -2732,11 +2852,32 @@ export default function Home() {
               <blockquote>«{currentCafeOrder.order}»</blockquote>
               <details><summary>Подсказка по смыслу</summary><span>{currentCafeOrder.meaning}</span></details>
               <h3>{currentCafeOrder.prompt}</h3>
-              <div className="cafe-order-choices">{currentCafeOrder.choices.map((choice) => <button key={choice.label} disabled={!!cafeShiftFeedback} className={cafeShiftFeedback ? choice.correct ? "correct" : "muted" : ""} onClick={() => answerCafeOrder(choice)}><span>Сказать:</span><strong>«{choice.label}»</strong></button>)}</div>
-              {cafeShiftFeedback && <div className={`cafe-order-feedback ${cafeShiftFeedback.correct ? "correct" : "wrong"}`}><b>{cafeShiftFeedback.correct ? "✓ ЗАКАЗ ПОНЯТ" : "✕ НУЖНО УТОЧНИТЬ"}</b><p>{cafeShiftFeedback.text}</p><button onClick={continueCafeShift}>{activeCafeShift.index >= activeCafeShift.orders.length - 1 ? "Закрыть кассу и подвести итог →" : "Впустить следующего гостя →"}</button></div>}
+              <div className="cafe-order-choices">{currentCafeOrder.choices.map((choice) => <button key={choice.label} disabled={!!cafeShiftFeedback || showCafeShiftLeaveConfirm} className={cafeShiftFeedback ? choice.correct ? "correct" : "muted" : ""} onClick={() => answerCafeOrder(choice)}><span>Сказать:</span><strong>«{choice.label}»</strong></button>)}</div>
+              {cafeShiftFeedback && <div className={`cafe-order-feedback ${cafeShiftFeedback.correct ? "correct" : "wrong"}`}><b>{cafeShiftFeedback.correct ? "✓ ЗАКАЗ ПОНЯТ" : "✕ НУЖНО УТОЧНИТЬ"}</b><p>{cafeShiftFeedback.text}</p><button type="button" disabled={showCafeShiftLeaveConfirm} onClick={continueCafeShift}>{activeCafeShift.index >= activeCafeShift.orders.length - 1 ? "Закрыть кассу и подвести итог →" : "Впустить следующего гостя →"}</button></div>}
             </section>
           </div>
         </div>
+        {showCafeShiftLeaveConfirm && (
+          <div className="cafe-shift-leave-backdrop" role="presentation">
+            <section ref={cafeShiftLeaveDialogRef} className="cafe-shift-leave-dialog" role="alertdialog" aria-modal="true" aria-labelledby="cafe-shift-leave-title" aria-describedby="cafe-shift-leave-description" tabIndex={-1}>
+              <button type="button" className="cafe-shift-leave-close" onClick={() => setShowCafeShiftLeaveConfirm(false)} aria-label="Отменить уход и вернуться к смене">×</button>
+              <p className="cafe-shift-leave-kicker">СМЕНА НЕ ЗАКОНЧЕНА</p>
+              <h2 id="cafe-shift-leave-title">Уйти из Café des Amis сейчас?</h2>
+              <p id="cafe-shift-leave-description">Малику придётся остаться одному. За незакрытую смену не будет зарплаты, а результаты заказов не засчитаются.</p>
+              <ul className="cafe-shift-leave-penalties" aria-label="Потери за досрочный уход">
+                <li><span>Деньги</span><strong>−20 € · зарплата 0 €</strong></li>
+                <li><span>Силы и опора</span><strong>−4 силы · −4 опоры</strong></li>
+                <li><span>Отношения</span><strong>Малик −8 · не ниже 0</strong></li>
+                <li><span>Потрачено времени</span><strong>{cafeShiftLeaveMinutes} мин. · начато заказов: {cafeShiftStartedGuests}</strong></li>
+              </ul>
+              <div className="cafe-shift-leave-actions">
+                <button type="button" className="cafe-shift-leave-cancel" autoFocus onClick={() => setShowCafeShiftLeaveConfirm(false)}>Остаться на смене</button>
+                <button type="button" className="cafe-shift-leave-confirm" onClick={leaveCafeShiftEarly} aria-label="Покинуть смену со штрафом">Покинуть смену · принять штраф</button>
+              </div>
+            </section>
+          </div>
+        )}
+        </>
       )}
 
       {activeAction && activeActivityKind && activeActivityScene && (
@@ -2799,7 +2940,7 @@ export default function Home() {
                       revealCurrentDialogueLine();
                     }}
                   >
-                    <blockquote aria-hidden="true"><span className="dialogue-typewriter-text">{dialogueVisibleText}</span>{!dialogueTextComplete && <i className="dialogue-typewriter-caret" />}</blockquote>
+                    <blockquote aria-hidden="true"><span className="dialogue-typewriter-text"><DialogueLineText text={dialogueVisibleText} source={dialogueLineSource} /></span>{!dialogueTextComplete && <i className="dialogue-typewriter-caret" />}</blockquote>
                     {!dialogueTextComplete && <small className="dialogue-reveal-hint">Нажмите или пробел — показать реплику целиком</small>}
                   </div>
                   {dialogueTurnPhase === "prompt" && (
@@ -2810,7 +2951,7 @@ export default function Home() {
                   {dialogueTurnPhase === "response" && <div className="dialogue-response-pause" aria-live="polite"><span>{activeDialogue.name} отвечает</span><i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" /></div>}
                 </div>
               )}
-              {dialogueStage === "result" && <div className="dialogue-turn dialogue-response-in"><div className="dialogue-answer-name">{activeDialogue.name}</div><blockquote>{dialogueResult}</blockquote><div className="dialogue-assignment-reveal"><span>ВЫ ДОГОВОРИЛИСЬ</span><strong>{activeDialogueMission.task}</strong><small><b>Что стало понятнее:</b> {activeDialogueMission.knowledge}</small></div><div className="dialogue-reward-note">Отношения, время и результаты будут засчитаны после завершения сцены.</div><button className="pixel-button primary" onClick={() => animateCloseWindow(completeDialogue)}>Завершить разговор и записать договорённость →</button></div>}
+              {dialogueStage === "result" && <div className="dialogue-turn dialogue-response-in"><div className="dialogue-answer-name">{activeDialogue.name}</div><blockquote><DialogueLineText text={dialogueResult} /></blockquote><div className="dialogue-assignment-reveal"><span>ВЫ ДОГОВОРИЛИСЬ</span><strong>{activeDialogueMission.task}</strong><small><b>Что стало понятнее:</b> {activeDialogueMission.knowledge}</small></div><div className="dialogue-reward-note">Отношения, время и результаты будут засчитаны после завершения сцены.</div><button className="pixel-button primary" onClick={() => animateCloseWindow(completeDialogue)}>Завершить разговор и записать договорённость →</button></div>}
             </div>
           </section>
         </div>
