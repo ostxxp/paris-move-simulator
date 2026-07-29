@@ -30,12 +30,13 @@ test("server-renders a translation-safe hydration shell", async () => {
 });
 
 test("keeps the requested gameplay systems in the product source", async () => {
-  const [page, layout, css, packageJson, metroMap] = await Promise.all([
+  const [page, layout, css, packageJson, metroMap, readme] = await Promise.all([
     readFile(new URL("app/page.tsx", projectRoot), "utf8"),
     readFile(new URL("app/layout.tsx", projectRoot), "utf8"),
     readFile(new URL("app/globals.css", projectRoot), "utf8"),
     readFile(new URL("package.json", projectRoot), "utf8"),
     readFile(new URL("app/game/paris-metro-schematic.json", projectRoot), "utf8"),
+    readFile(new URL("README.md", projectRoot), "utf8"),
   ]);
 
   assert.match(page, /Бакалавриат/);
@@ -170,6 +171,10 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(css, /\.scene-time-night/);
   assert.match(css, /@container paris-map/);
   assert.match(css, /\.map-location-montmartre/);
+  assert.doesNotMatch(page, /og\.png/);
+  assert.doesNotMatch(layout, /og\.png/);
+  assert.doesNotMatch(css, /url\(['"]?\/og\.png/);
+  assert.match(readme, /!\[Paris, Nouvelle Vie — pixel-art preview\]\(\.\/public\/og\.png\)/);
   const parsedMap = JSON.parse(metroMap);
   assert.equal(parsedMap.lines.length, 16);
   assert.ok(parsedMap.stations.length >= 300);
