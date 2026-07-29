@@ -297,6 +297,7 @@ type SavedGame = {
   relationships?: Record<string, number>;
   npcAssignments?: Record<string, NpcAssignment>;
   completedActionIds?: string[];
+  recentCafeOrderIds?: string[];
 };
 
 const STORAGE_KEY = "paris-nouvelle-vie-save-v1";
@@ -482,7 +483,124 @@ const cafeOrderPool: CafeOrder[] = [
       { label: "Deux expressos avec du sucre.", correct: false, feedback: "Фату просила tisane без сахара, не кофе." },
     ],
   },
+  {
+    id: "rachid-petit-dej", customer: { id: "rachid", name: "Рашид", role: "фотограф", color: "#386b80", hair: "#181a1d", accessory: "moustache", line: "" },
+    entrance: "Рашид вешает на спинку стула камеру и просит завтрак до начала съёмки.", order: "La formule petit-déjeuner : un café crème, une tartine beurre-confiture et un jus d’orange pressé.", meaning: "Завтрак: кофе со сливками, тост с маслом и джемом и свежевыжатый апельсиновый сок.", prompt: "Как не потерять ни одну часть формулы?",
+    choices: [
+      { label: "Un café crème, une tartine beurre-confiture et un jus d’orange pressé.", correct: true, feedback: "Всё на месте: напиток, тост и именно свежевыжатый сок." },
+      { label: "Un café noir et un croissant seulement.", correct: false, feedback: "Это другой завтрак: пропали tartine и jus pressé." },
+      { label: "Une formule déjeuner avec de l’eau.", correct: false, feedback: "Petit-déjeuner — завтрак, не обеденная формула." },
+    ],
+  },
+  {
+    id: "chloe-chocolat", customer: { id: "chloe", name: "Хлоя", role: "танцовщица", color: "#a9556b", hair: "#6b3a2e", accessory: "scarf", line: "" },
+    entrance: "Хлоя стряхивает дождь с пальто и греет ладони у кофемашины.", order: "Un chocolat chaud sans chantilly, et un pain au chocolat réchauffé, s’il vous plaît.", meaning: "Горячий шоколад без взбитых сливок и разогретый pain au chocolat.", prompt: "Какое слово меняет подачу выпечки?",
+    choices: [
+      { label: "Je réchauffe le pain au chocolat, et le chocolat chaud sera sans chantilly.", correct: true, feedback: "Верно: réchauffer — разогреть, sans chantilly — без сливок." },
+      { label: "Je sers tout froid avec de la chantilly.", correct: false, feedback: "Получилось ровно наоборот." },
+      { label: "Un croissant et un café glacé.", correct: false, feedback: "Клиентка заказала другие напиток и выпечку." },
+    ],
+  },
+  {
+    id: "alain-double", customer: { id: "alain", name: "Ален", role: "таксист", color: "#315a76", hair: "#55505a", accessory: "moustache", line: "" },
+    entrance: "Ален оставляет ключи у кассы и говорит заказ одним привычным выдохом.", order: "Un double expresso dans une tasse bien chaude, avec un verre d’eau gazeuse.", meaning: "Двойной эспрессо в хорошо прогретой чашке и стакан газированной воды.", prompt: "Что здесь важно кроме двойной порции?",
+    choices: [
+      { label: "Une tasse préchauffée et un verre d’eau gazeuse avec le double expresso.", correct: true, feedback: "Точно: прогретая чашка и газированная вода не потерялись." },
+      { label: "Une tasse froide et de l’eau plate.", correct: false, feedback: "И температура чашки, и вид воды перепутаны." },
+      { label: "Deux cafés allongés sans eau.", correct: false, feedback: "Double expresso — не два allongés." },
+    ],
+  },
+  {
+    id: "sofia-vegetal", customer: { id: "sofia", name: "София", role: "дизайнерка", color: "#7c5f9a", hair: "#2f252d", accessory: "glasses", line: "" },
+    entrance: "София показывает сохранённый референс цвета, затем убирает телефон и улыбается.", order: "Un latte au lait de soja, peu sucré, avec la cannelle à part.", meaning: "Латте на соевом молоке, слегка сладкий, корица отдельно.", prompt: "Как подтвердить все три уточнения?",
+    choices: [
+      { label: "Lait de soja, peu sucré, et je mets la cannelle à part.", correct: true, feedback: "Все уточнения повторены ясно и коротко." },
+      { label: "Lait entier, très sucré, avec la cannelle dedans.", correct: false, feedback: "Каждое уточнение оказалось противоположным." },
+      { label: "Un thé sans lait ni sucre.", correct: false, feedback: "София заказала latte." },
+    ],
+  },
+  {
+    id: "marc-vegan", customer: { id: "marc", name: "Марк", role: "садовник", color: "#4f7b54", hair: "#4e3528", accessory: "beret", line: "" },
+    entrance: "Марк ставит у двери корзину с растениями и внимательно читает витрину.", order: "Le sandwich aux légumes, mais sans fromage ni beurre. C’est bien végétalien ?", meaning: "Овощной сэндвич без сыра и масла; клиент уточняет, полностью ли он веганский.", prompt: "Как ответить безопасно, если нужно проверить состав?",
+    choices: [
+      { label: "Je vérifie la composition en cuisine avant de vous le confirmer.", correct: true, feedback: "Правильно: при ограничениях лучше проверить, а не угадывать." },
+      { label: "Oui, sûrement, même avec un peu de beurre.", correct: false, feedback: "Beurre не подходит, а «наверное» — плохое подтверждение состава." },
+      { label: "Je peux ajouter du jambon.", correct: false, feedback: "Это противоречит запросу на végétalien." },
+    ],
+  },
+  {
+    id: "elodie-gluten", customer: { id: "elodie", name: "Элоди", role: "юристка", color: "#a34c4f", hair: "#c7b08d", accessory: "glasses", line: "" },
+    entrance: "Элоди кладёт рядом папку с делом и сразу предупреждает об аллергии.", order: "Je suis cœliaque. Est-ce que ce gâteau est vraiment sans gluten, sans contamination croisée ?", meaning: "У клиентки целиакия; она спрашивает о безглютеновом десерте и перекрёстном загрязнении.", prompt: "Какой ответ будет профессиональным?",
+    choices: [
+      { label: "Je demande en cuisine quels ustensiles ont été utilisés avant de vous répondre.", correct: true, feedback: "Верно: проверяем не только состав, но и приготовление." },
+      { label: "Enlevez simplement les miettes, ce sera bon.", correct: false, feedback: "Крошки как раз создают риск загрязнения." },
+      { label: "Tous les gâteaux sont pareils.", correct: false, feedback: "Так нельзя отвечать на вопрос об аллергии." },
+    ],
+  },
+  {
+    id: "gabriel-addition", customer: { id: "gabriel", name: "Габриэль", role: "учитель", color: "#4c6991", hair: "#5e3b2c", accessory: "none", line: "" },
+    entrance: "Габриэль подходит от большого стола и держит в руке ошибочный счёт.", order: "Pardon, il y a trois cafés sur l’addition, mais nous n’en avons pris que deux.", meaning: "В счёте три кофе, хотя компания заказала только два.", prompt: "Как лучше отреагировать на ошибку?",
+    choices: [
+      { label: "Je suis désolé. Je vérifie la commande et je corrige l’addition tout de suite.", correct: true, feedback: "Вежливое извинение, проверка и конкретное действие." },
+      { label: "Payez d’abord, on verra demain.", correct: false, feedback: "Ошибка кафе должна быть исправлена до оплаты." },
+      { label: "Vous avez certainement oublié le troisième café.", correct: false, feedback: "Не стоит обвинять гостя без проверки." },
+    ],
+  },
+  {
+    id: "zoe-reservation", customer: { id: "zoe", name: "Зоэ", role: "издательница", color: "#8b617d", hair: "#211c22", accessory: "beret", line: "" },
+    entrance: "Зоэ оглядывает зал, сверяется с часами и подходит уточнить бронь.", order: "J’ai réservé une table pour quatre au nom de Martin, près de la fenêtre.", meaning: "Бронь на четверых на имя Мартен, возле окна.", prompt: "Какие данные нужно повторить?",
+    choices: [
+      { label: "Une table pour quatre, au nom de Martin, près de la fenêtre.", correct: true, feedback: "Количество гостей, имя и пожелание по месту подтверждены." },
+      { label: "Une table pour deux au nom de Martine, en terrasse.", correct: false, feedback: "Изменились и число, и имя, и место." },
+      { label: "Quatre cafés à emporter.", correct: false, feedback: "Речь шла о брони стола, не о напитках." },
+    ],
+  },
+  {
+    id: "idris-frappe", customer: { id: "idris", name: "Идрис", role: "звукорежиссёр", color: "#3e7080", hair: "#15171b", accessory: "scarf", line: "" },
+    entrance: "Идрис снимает наушники только с одного уха и отбивает пальцами ритм.", order: "Un café frappé sans sirop, avec très peu de glaçons et sans paille.", meaning: "Холодный кофе без сиропа, совсем немного льда и без трубочки.", prompt: "Как передать нестандартную подачу?",
+    choices: [
+      { label: "Sans sirop, peu de glaçons et sans paille.", correct: true, feedback: "Коротко и точно повторены все ограничения." },
+      { label: "Beaucoup de glaçons, du sirop et deux pailles.", correct: false, feedback: "Это полная противоположность заказу." },
+      { label: "Un café brûlant dans une grande tasse.", correct: false, feedback: "Frappé подаётся холодным." },
+    ],
+  },
+  {
+    id: "pauline-partager", customer: { id: "pauline", name: "Полин", role: "журналистка", color: "#b25a55", hair: "#523126", accessory: "glasses", line: "" },
+    entrance: "Полин собирает у друзей банковские карты и подходит к кассе со счётом.", order: "On voudrait partager l’addition en trois parts égales, si c’est possible.", meaning: "Компания хочет разделить счёт на три равные части.", prompt: "Как подтвердить способ оплаты?",
+    choices: [
+      { label: "Bien sûr, je divise le total en trois montants égaux.", correct: true, feedback: "Именно: три одинаковые суммы." },
+      { label: "Une seule personne doit tout payer.", correct: false, feedback: "Это не соответствует просьбе гостей." },
+      { label: "Je divise le total en quatre.", correct: false, feedback: "Гости попросили три части, не четыре." },
+    ],
+  },
+  {
+    id: "ana-noisette-allergy", customer: { id: "ana", name: "Ана", role: "переводчица", color: "#6d679a", hair: "#402b25", accessory: "none", line: "" },
+    entrance: "Ана здоровается сразу на трёх языках, но заказ делает медленно и очень чётко.", order: "Un espresso, et aucun fruit à coque : j’ai une allergie sévère aux noisettes.", meaning: "Эспрессо без контакта с орехами; сильная аллергия на фундук.", prompt: "Почему здесь нельзя путать noisette с названием напитка?",
+    choices: [
+      { label: "Je note l’allergie et j’utilise du matériel propre, sans contact avec les noisettes.", correct: true, feedback: "Правильно: noisettes здесь буквально фундук, и риск нужно отметить." },
+      { label: "Je vous prépare justement un café noisette.", correct: false, feedback: "При сильной аллергии такая игра слов опасна." },
+      { label: "Quelques amandes ne posent pas de problème.", correct: false, feedback: "Нельзя самостоятельно ослаблять ограничение клиента." },
+    ],
+  },
+  {
+    id: "omar-gobelet", customer: { id: "omar", name: "Омар", role: "инженер", color: "#497468", hair: "#28201e", accessory: "moustache", line: "" },
+    entrance: "Омар достаёт многоразовую кружку и ставит её на стойку крышкой рядом.", order: "Un déca à emporter dans mon gobelet, avec un seul sucre roux.", meaning: "Декаф навынос в собственной кружке и один коричневый сахар.", prompt: "Как подтвердить тару и сахар?",
+    choices: [
+      { label: "Un déca dans votre gobelet, avec un sucre roux.", correct: true, feedback: "Верно: собственная кружка и ровно один коричневый сахар." },
+      { label: "Un double dans un gobelet jetable, sans sucre.", correct: false, feedback: "Перепутаны кофе, тара и сахар." },
+      { label: "Deux décas sur place.", correct: false, feedback: "Заказ один и навынос." },
+    ],
+  },
 ];
+
+function shuffleItems<T>(items: readonly T[]) {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(Math.random() * (index + 1));
+    [result[index], result[target]] = [result[target], result[index]];
+  }
+  return result;
+}
 
 const locations: LocationDef[] = [
   {
@@ -1602,10 +1720,14 @@ export default function Home() {
   const [dialogueStage, setDialogueStage] = useState<"intro" | "choice" | "result">("choice");
   const [activeDialogueIndex, setActiveDialogueIndex] = useState(0);
   const [dialogueRoundIndex, setDialogueRoundIndex] = useState(0);
+  const [dialogueTurnPhase, setDialogueTurnPhase] = useState<"prompt" | "response">("prompt");
+  const [dialogueVisibleText, setDialogueVisibleText] = useState("");
+  const [dialogueTextComplete, setDialogueTextComplete] = useState(false);
   const [dialogueTranscript, setDialogueTranscript] = useState<DialogueLine[]>([]);
   const [dialoguePendingEffects, setDialoguePendingEffects] = useState<Partial<Stats>>({});
   const [dialoguePendingRelationship, setDialoguePendingRelationship] = useState(0);
   const [dialogueElapsedMinutes, setDialogueElapsedMinutes] = useState(0);
+  const dialogueTypingSkipRef = useRef(false);
   const [npcDialogueProgress, setNpcDialogueProgress] = useState<Record<string, number>>({});
   const [relationships, setRelationships] = useState<Record<string, number>>({});
   const [npcAssignments, setNpcAssignments] = useState<Record<string, NpcAssignment>>({});
@@ -1625,6 +1747,7 @@ export default function Home() {
   const [actionProgress, setActionProgress] = useState(0);
   const [activeCafeShift, setActiveCafeShift] = useState<ActiveCafeShift | null>(null);
   const [cafeShiftFeedback, setCafeShiftFeedback] = useState<{ correct: boolean; text: string } | null>(null);
+  const [recentCafeOrderIds, setRecentCafeOrderIds] = useState<string[]>([]);
   const [closingWindow, setClosingWindow] = useState(false);
   const [showEventReveal, setShowEventReveal] = useState(false);
   const [completedDailyTaskIds, setCompletedDailyTaskIds] = useState<string[]>([]);
@@ -1646,6 +1769,20 @@ export default function Home() {
   const activeDialogueRounds = activeDialogue ? getDialogueRounds(activeDialogue.id, activeDialogueIndex) : [];
   const activeDialogueRound = activeDialogueRounds[dialogueRoundIndex] ?? null;
   const activeDialogueRelationship = activeDialogue ? relationships[activeDialogue.id] ?? 0 : 0;
+  const activeDialogueId = activeDialogue?.id ?? "";
+  const dialogueLineSource = dialogueStage === "choice"
+    ? dialogueTurnPhase === "prompt"
+      ? activeDialogueRound?.prompt ?? ""
+      : dialogueResult
+    : "";
+  const canChooseDialogue = dialogueStage === "choice" && dialogueTurnPhase === "prompt" && dialogueTextComplete;
+  const dialoguePortraitState = dialogueStage === "intro"
+    ? "entering"
+    : dialogueStage === "result"
+      ? "settled"
+      : dialogueTurnPhase === "response" || !dialogueTextComplete
+        ? "speaking"
+        : "listening";
   const goal = yearGoals[Math.min(year - 1, yearGoals.length - 1)];
   const chapter = storyChapters[Math.min(year - 1, storyChapters.length - 1)];
   const goalsMet = stats.french >= goal.french && stats.admin >= goal.admin && stats.assimilation >= goal.assimilation && stats.stability >= goal.stability;
@@ -1716,9 +1853,9 @@ export default function Home() {
 
   useEffect(() => {
     if (phase !== "game" || !profile.name) return;
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments, recentCafeOrderIds };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
-  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments]);
+  }, [phase, profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments, recentCafeOrderIds]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1733,6 +1870,79 @@ export default function Home() {
     }, 520);
     return () => window.clearInterval(timer);
   }, [activeDialogue, activeDialogueMission, dialogueStage]);
+
+  useEffect(() => {
+    if (!activeDialogueId || dialogueStage !== "choice" || !dialogueLineSource) {
+      dialogueTypingSkipRef.current = false;
+      return;
+    }
+
+    let cancelled = false;
+    let cursor = 0;
+    let timer = 0;
+    dialogueTypingSkipRef.current = false;
+
+    const typeNextCharacter = () => {
+      if (cancelled) return;
+      if (dialogueTypingSkipRef.current) {
+        setDialogueVisibleText(dialogueLineSource);
+        setDialogueTextComplete(true);
+        return;
+      }
+
+      cursor = Math.min(dialogueLineSource.length, cursor + 1);
+      setDialogueVisibleText(dialogueLineSource.slice(0, cursor));
+      if (cursor >= dialogueLineSource.length) {
+        setDialogueTextComplete(true);
+        return;
+      }
+
+      const typedCharacter = dialogueLineSource[cursor - 1];
+      const delay = /[.!?…]/.test(typedCharacter) ? 220 : /[,;:—]/.test(typedCharacter) ? 90 : 28;
+      timer = window.setTimeout(typeNextCharacter, delay);
+    };
+
+    timer = window.setTimeout(typeNextCharacter, dialogueTurnPhase === "response" ? 180 : 260);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [activeDialogueId, dialogueStage, dialogueLineSource, dialogueTurnPhase, dialogueRoundIndex]);
+
+  useEffect(() => {
+    if (!activeDialogueId || dialogueStage !== "choice" || dialogueTurnPhase !== "response" || !dialogueTextComplete || !dialogueResult) return;
+    const response = dialogueResult;
+    const finalRound = dialogueRoundIndex >= activeDialogueRounds.length - 1;
+    const pauseAfterLine = 1600 + Math.min(2800, response.length * 18);
+    const timer = window.setTimeout(() => {
+      setDialogueTranscript((lines) => [...lines, { speaker: "npc", text: response }]);
+      if (finalRound) {
+        setDialogueStage("result");
+      } else {
+        setDialogueVisibleText("");
+        setDialogueTextComplete(false);
+        setDialogueRoundIndex((index) => index + 1);
+        setDialogueResult("");
+        setDialogueTurnPhase("prompt");
+      }
+    }, pauseAfterLine);
+    return () => window.clearTimeout(timer);
+  }, [activeDialogueId, dialogueStage, dialogueTurnPhase, dialogueTextComplete, dialogueResult, dialogueRoundIndex, activeDialogueRounds.length]);
+
+  useEffect(() => {
+    if (!activeDialogueId || dialogueStage !== "choice" || dialogueTextComplete) return;
+    const revealOnKeyboard = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("button, input, textarea, select, a")) return;
+      event.preventDefault();
+      dialogueTypingSkipRef.current = true;
+      setDialogueVisibleText(dialogueLineSource);
+      setDialogueTextComplete(true);
+    };
+    window.addEventListener("keydown", revealOnKeyboard);
+    return () => window.removeEventListener("keydown", revealOnKeyboard);
+  }, [activeDialogueId, dialogueStage, dialogueTextComplete, dialogueLineSource]);
 
   useEffect(() => {
     const paused = phase !== "game" || !awake || !!activeTravel || !!activeAction || !!activeCafeShift || !!activeDialogue || !!activeEvent || !!pendingTravel || !!metroTrip || !!dayTransitionPhase || tutorialStep >= 0 || showEventReveal || showGameMenu || showJournal || showAchievements;
@@ -1794,8 +2004,8 @@ export default function Home() {
     setYear(1); setDay(1); setTime(7); setLocationId("home"); setAwake(false);
     setActionCount(0); setSeenEvents([]); setMetNpcs([]);
     setDailyProgress(emptyDayProgress); setDailyRewardClaimed(false); setVisitedLocations(["home"]); setCompletedCityEvents([]);
-    setCompletedDailyTaskIds([]); setCompletedActionIds([]); setChapterProgressPoints(0); setNpcDialogueProgress({}); setRelationships({}); setNpcAssignments({});
-    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setActiveDialogueIndex(0); setDialogueRoundIndex(0); setDialogueTranscript([]); setDialoguePendingEffects({}); setDialoguePendingRelationship(0); setDialogueElapsedMinutes(0); setShowAchievements(false); setShowGameMenu(false);
+    setCompletedDailyTaskIds([]); setCompletedActionIds([]); setChapterProgressPoints(0); setNpcDialogueProgress({}); setRelationships({}); setNpcAssignments({}); setRecentCafeOrderIds([]);
+    setActiveDialogue(null); setDialogueResult(""); setDialogueStage("choice"); setActiveDialogueIndex(0); setDialogueRoundIndex(0); setDialogueTurnPhase("prompt"); setDialogueVisibleText(""); setDialogueTextComplete(false); dialogueTypingSkipRef.current = false; setDialogueTranscript([]); setDialoguePendingEffects({}); setDialoguePendingRelationship(0); setDialogueElapsedMinutes(0); setShowAchievements(false); setShowGameMenu(false);
     setStatsExpanded(false); setStoryExpanded(false); setSideTab("actions");
     setMetroTrip(null); setActiveTravel(null); setTravelProgress(0); setActiveAction(null); setActionProgress(0); setActiveCafeShift(null); setCafeShiftFeedback(null); setClosingWindow(false); setShowEventReveal(false); setDayTransitionPhase(null);
     setViewMode("scene"); setPendingTravel(null); setTutorialStep(0);
@@ -1811,7 +2021,7 @@ export default function Home() {
     setDailyProgress(savedGame.dailyProgress ?? emptyDayProgress); setDailyRewardClaimed(savedGame.dailyRewardClaimed ?? false);
     setVisitedLocations(savedGame.visitedLocations ?? [savedGame.locationId]); setCompletedCityEvents(savedGame.completedCityEvents ?? []);
     setCompletedDailyTaskIds(savedGame.completedDailyTaskIds ?? []); setCompletedActionIds(savedGame.completedActionIds ?? []); setChapterProgressPoints(savedGame.chapterProgressPoints ?? 0);
-    setNpcDialogueProgress(savedGame.npcDialogueProgress ?? {}); setRelationships(savedGame.relationships ?? {}); setNpcAssignments(savedGame.npcAssignments ?? {});
+    setNpcDialogueProgress(savedGame.npcDialogueProgress ?? {}); setRelationships(savedGame.relationships ?? {}); setNpcAssignments(savedGame.npcAssignments ?? {}); setRecentCafeOrderIds(savedGame.recentCafeOrderIds ?? []);
     setAwake(true); setViewMode("scene"); setTutorialStep(-1); setSideTab("actions"); setActiveAction(null); setActiveCafeShift(null); setCafeShiftFeedback(null); setClosingWindow(false); setShowEventReveal(false); setPhase("game");
   };
 
@@ -1821,7 +2031,7 @@ export default function Home() {
   };
 
   const exitToTitle = () => {
-    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments };
+    const save: SavedGame = { profile, routeId, stats, year, day, time, locationId, actionCount, seenEvents, metNpcs, journal, dailyProgress, dailyRewardClaimed, visitedLocations, completedCityEvents, completedDailyTaskIds, completedActionIds, chapterProgressPoints, npcDialogueProgress, relationships, npcAssignments, recentCafeOrderIds };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
     setSavedGame(save);
     setPhase("intro");
@@ -1917,7 +2127,13 @@ export default function Home() {
     const actionLocation = currentLocation;
     const actionStart = time;
     if (action.id === "shift") {
-      const orders = [...cafeOrderPool].sort(() => Math.random() - 0.5).slice(0, 5);
+      const unseenOrders = cafeOrderPool.filter((order) => !recentCafeOrderIds.includes(order.id));
+      const seenOrders = cafeOrderPool.filter((order) => recentCafeOrderIds.includes(order.id));
+      const orderCandidates = unseenOrders.length >= 5
+        ? shuffleItems(unseenOrders)
+        : [...shuffleItems(unseenOrders), ...shuffleItems(seenOrders)];
+      const orders = orderCandidates.slice(0, 5).map((order) => ({ ...order, choices: shuffleItems(order.choices) }));
+      setRecentCafeOrderIds((ids) => [...ids, ...orders.map((order) => order.id)].slice(-15));
       setCafeShiftFeedback(null);
       setActiveCafeShift({ action, locationId: actionLocation.id, startTime: actionStart, orders, index: 0, correct: 0 });
       return;
@@ -2026,6 +2242,10 @@ export default function Home() {
     setActiveDialogue(currentNpc);
     setActiveDialogueIndex(index);
     setDialogueRoundIndex(0);
+    setDialogueTurnPhase("prompt");
+    setDialogueVisibleText("");
+    setDialogueTextComplete(false);
+    dialogueTypingSkipRef.current = false;
     setDialogueResult("");
     setDialogueTranscript([]);
     setDialoguePendingEffects({});
@@ -2035,19 +2255,21 @@ export default function Home() {
   };
 
   const chooseDialogue = (choice: DialogueChoice) => {
-    if (!activeDialogue || !activeDialogueDef || !activeDialogueMission || !activeDialogueRound) return;
-    const finalRound = dialogueRoundIndex >= activeDialogueRounds.length - 1;
+    if (!activeDialogue || !activeDialogueDef || !activeDialogueMission || !activeDialogueRound || !canChooseDialogue) return;
     setDialoguePendingEffects((effects) => mergeEffectDeltas(effects, choice.effects));
     setDialoguePendingRelationship((value) => value + 3 + ((choice.effects.assimilation ?? 0) > 6 ? 1 : 0));
-    setDialogueTranscript((lines) => [...lines, { speaker: "player", text: choice.label }, { speaker: "npc", text: choice.response }]);
-    if (finalRound) {
-      setDialogueResult(choice.response);
-      setDialogueStage("result");
-    } else {
-      setDialogueRoundIndex((index) => index + 1);
-      setDialogueResult("");
-      setDialogueStage("choice");
-    }
+    setDialogueTranscript((lines) => [...lines, { speaker: "player", text: choice.label }]);
+    setDialogueVisibleText("");
+    setDialogueTextComplete(false);
+    setDialogueResult(choice.response);
+    setDialogueTurnPhase("response");
+  };
+
+  const revealCurrentDialogueLine = () => {
+    if (dialogueStage !== "choice" || dialogueTextComplete || !dialogueLineSource) return;
+    dialogueTypingSkipRef.current = true;
+    setDialogueVisibleText(dialogueLineSource);
+    setDialogueTextComplete(true);
   };
 
   const resetDialogueSession = () => {
@@ -2055,6 +2277,10 @@ export default function Home() {
     setDialogueResult("");
     setDialogueStage("choice");
     setDialogueRoundIndex(0);
+    setDialogueTurnPhase("prompt");
+    setDialogueVisibleText("");
+    setDialogueTextComplete(false);
+    dialogueTypingSkipRef.current = false;
     setDialogueTranscript([]);
     setDialoguePendingEffects({});
     setDialoguePendingRelationship(0);
@@ -2540,13 +2766,50 @@ export default function Home() {
 
       {activeDialogue && activeDialogueDef && activeDialogueMission && activeDialogueRound && (
         <div className="modal-backdrop dialogue-backdrop">
-          <section className="dialogue-modal">
-            <button className="modal-close" onClick={() => animateCloseWindow(closeDialogue)}>×</button>
-            <div className="dialogue-speaker"><PixelPortrait npc={activeDialogue} /><span>{activeDialogue.role}</span><h2>{activeDialogue.name}</h2><small>{currentLocation.label}</small><div className="speaker-relationship"><span>{getRelationshipTitle(activeDialogueRelationship)}</span><i><b style={{ width: `${activeDialogueRelationship}%` }} /></i><strong>{activeDialogueRelationship}%{dialoguePendingRelationship > 0 && <em> +{dialoguePendingRelationship} после разговора</em>}</strong></div></div>
+          <section className="dialogue-modal visual-novel-dialogue" role="dialog" aria-modal="true" aria-label={`Разговор с ${activeDialogue.name}`} data-dialogue-stage={dialogueStage} data-turn-phase={dialogueTurnPhase}>
+            <button className="modal-close" aria-label="Прервать разговор" onClick={() => animateCloseWindow(closeDialogue)}>×</button>
+            <div className={`dialogue-speaker dialogue-speaker-bust vn-speaker is-${dialoguePortraitState}`} data-character-id={activeDialogue.id} data-portrait-state={dialoguePortraitState}>
+              <div className={`dialogue-portrait-stage portrait-bust is-${dialoguePortraitState}`} key={`${activeDialogue.id}-${dialogueRoundIndex}-${dialoguePortraitState}`}>
+                <div className="dialogue-portrait-crop"><PixelPortrait npc={activeDialogue} /></div>
+                <i className="dialogue-portrait-glow" aria-hidden="true" />
+              </div>
+              <span>{activeDialogue.role}</span>
+              <h2>{activeDialogue.name}</h2>
+              <small>{currentLocation.label}</small>
+              <div className="speaker-relationship"><span>{getRelationshipTitle(activeDialogueRelationship)}</span><i><b style={{ width: `${activeDialogueRelationship}%` }} /></i><strong>{activeDialogueRelationship}%{dialoguePendingRelationship > 0 && <em> +{dialoguePendingRelationship} после разговора</em>}</strong></div>
+            </div>
             <div className="dialogue-content">
               <p className="eyebrow ink">{dialogueStage === "intro" ? "НОВОЕ ЗНАКОМСТВО" : `РАЗГОВОР · ${formatTime(time + dialogueElapsedMinutes / 60)} · ПРОШЛО ${dialogueElapsedMinutes} МИН.`}</p>
               {dialogueStage === "intro" && <><div className="character-introduction"><span>КТО ЭТО?</span><p>{activeDialogueDef.intro}</p></div><div className="conversation-context"><span>О чём заходит речь</span><strong>{activeDialogueMission.title}</strong><p>{activeDialogueMission.goal}</p></div><button className="pixel-button primary" onClick={() => setDialogueStage("choice")}>Поздороваться и представиться →</button></>}
-              {dialogueStage === "choice" && <div className="dialogue-turn dialogue-turn-in" key={`dialogue-turn-${dialogueRoundIndex}`}><div className="conversation-flow">{activeDialogueRounds.map((_, index) => <i key={index} className={index <= dialogueRoundIndex ? "active" : ""} />)}<span>тема: {activeDialogueMission.title}</span></div>{dialogueTranscript.length > 0 && <div className="dialogue-transcript">{dialogueTranscript.slice(-4).map((line, index) => <p className={line.speaker} key={`${line.speaker}-${index}-${line.text}`}><span>{line.speaker === "player" ? profile.name : activeDialogue.name}</span>{line.text}</p>)}</div>}<blockquote>{activeDialogueRound.prompt}</blockquote><div className="dialogue-choices">{activeDialogueRound.choices.map((choice) => <button key={choice.label} onClick={() => chooseDialogue(choice)}><strong>{choice.label}</strong><b>→</b></button>)}</div></div>}
+              {dialogueStage === "choice" && (
+                <div className={`dialogue-turn dialogue-turn-in dialogue-phase-${dialogueTurnPhase}`} key={`dialogue-turn-${dialogueRoundIndex}`}>
+                  <div className="conversation-flow">{activeDialogueRounds.map((_, index) => <i key={index} className={index <= dialogueRoundIndex ? "active" : ""} />)}<span>тема: {activeDialogueMission.title}</span></div>
+                  {dialogueTranscript.length > 0 && <div className="dialogue-transcript">{dialogueTranscript.slice(-4).map((line, index) => <p className={line.speaker} key={`${line.speaker}-${index}-${line.text}`}><span>{line.speaker === "player" ? profile.name : activeDialogue.name}</span>{line.text}</p>)}</div>}
+                  <div
+                    className={`dialogue-line-stage npc-line ${dialogueTextComplete ? "is-complete" : "is-typing"}`}
+                    data-speaker={activeDialogue.id}
+                    data-line-kind={dialogueTurnPhase}
+                    role={!dialogueTextComplete ? "button" : undefined}
+                    tabIndex={!dialogueTextComplete ? 0 : -1}
+                    aria-label={!dialogueTextComplete ? `${activeDialogue.name} говорит. Нажмите, чтобы показать реплику целиком.` : `${activeDialogue.name}: ${dialogueLineSource}`}
+                    onClick={revealCurrentDialogueLine}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      revealCurrentDialogueLine();
+                    }}
+                  >
+                    <blockquote aria-hidden="true"><span className="dialogue-typewriter-text">{dialogueVisibleText}</span>{!dialogueTextComplete && <i className="dialogue-typewriter-caret" />}</blockquote>
+                    {!dialogueTextComplete && <small className="dialogue-reveal-hint">Нажмите или пробел — показать реплику целиком</small>}
+                  </div>
+                  {dialogueTurnPhase === "prompt" && (
+                    <div className={`dialogue-choices ${canChooseDialogue ? "is-ready" : "is-locked"}`} aria-label="Варианты ответа" aria-busy={!canChooseDialogue}>
+                      {activeDialogueRound.choices.map((choice) => <button key={choice.label} disabled={!canChooseDialogue} aria-disabled={!canChooseDialogue} onClick={() => chooseDialogue(choice)}><strong>{choice.label}</strong><b>→</b></button>)}
+                    </div>
+                  )}
+                  {dialogueTurnPhase === "response" && <div className="dialogue-response-pause" aria-live="polite"><span>{activeDialogue.name} отвечает</span><i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" /></div>}
+                </div>
+              )}
               {dialogueStage === "result" && <div className="dialogue-turn dialogue-response-in"><div className="dialogue-answer-name">{activeDialogue.name}</div><blockquote>{dialogueResult}</blockquote><div className="dialogue-assignment-reveal"><span>ВЫ ДОГОВОРИЛИСЬ</span><strong>{activeDialogueMission.task}</strong><small><b>Что стало понятнее:</b> {activeDialogueMission.knowledge}</small></div><div className="dialogue-reward-note">Отношения, время и результаты будут засчитаны после завершения сцены.</div><button className="pixel-button primary" onClick={() => animateCloseWindow(completeDialogue)}>Завершить разговор и записать договорённость →</button></div>}
             </div>
           </section>

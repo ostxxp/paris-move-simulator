@@ -596,3 +596,104 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--cinema-gold-lig
   .activity-stage{height:42vh;width:94vw}.activity-shot-label{left:12px;top:12px}.modal-backdrop{padding:9px}.window-view{min-height:240px}.event-art{height:190px}
 }
 @media (prefers-reduced-motion:reduce){.scene-image-layer,.activity-stage{animation:none!important}.pixel-button:not(:disabled):hover{transform:none}.game-shell:before{display:none}}
+
+/* Final UX pass: readable HUD, intact frames and visual-novel conversations. */
+.game-shell{height:100dvh;min-height:0;overflow:hidden}
+.game-header{position:relative;height:82px;min-height:82px;padding-top:max(8px,env(safe-area-inset-top));flex:0 0 82px}
+.time-block{z-index:2;padding:3px 12px;border-radius:8px;background:rgba(5,19,37,.38);pointer-events:none}
+.game-layout{grid-template-columns:clamp(285px,20vw,320px) minmax(0,1fr) clamp(330px,24vw,380px);min-width:0;min-height:0;overflow:hidden}
+.center-stage,.pixel-panel,.left-panel,.right-panel{min-width:0;min-height:0}
+.pixel-panel{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+.week-agenda-head span,.week-agenda-head em,.duty-head{font-size:9px}
+.week-strip b,.week-strip i{font-size:8px}
+.week-duty{grid-template-columns:28px minmax(0,1fr) auto;gap:8px;padding:8px}
+.week-duty>i{width:27px;height:27px}
+.week-duty strong{font-size:12px;line-height:1.25;overflow-wrap:anywhere}
+.week-duty>div>small{display:block;font-size:8px;line-height:1.35}
+.week-duty>b{font-size:9px}.week-duty>b small{font-size:7px}
+.daily-task{min-width:0}.daily-task strong{font-size:13px;line-height:1.25;overflow-wrap:anywhere}.daily-task small{display:block!important;font-size:8px;line-height:1.35}.daily-task>b{font-size:8px}
+.daily-plan-head,.week-agenda-head{min-width:0}.daily-plan-head>*{min-width:0}
+.side-tabs button,.actions-title span,.location-heading span{font-size:10px}
+
+/* The outer frame stays rectangular; the former clip-path cut off its left edge. */
+.modal-backdrop{padding-top:max(16px,env(safe-area-inset-top));padding-right:max(16px,env(safe-area-inset-right));padding-bottom:max(16px,env(safe-area-inset-bottom));padding-left:max(16px,env(safe-area-inset-left));overflow:auto}
+.modal-backdrop>section,.dialogue-modal,.tutorial-modal,.story-modal,.morning-modal,.game-menu-modal,.journal-modal,.achievements-modal,.event-reveal-modal{
+  box-sizing:border-box;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);clip-path:none!important;border:2px solid #e2ad4a!important;border-left-width:6px!important;box-shadow:0 30px 90px rgba(0,0,0,.58),0 10px 25px rgba(0,0,0,.32),inset 0 0 0 5px rgba(255,224,157,.08)!important
+}
+.morning-modal,.story-modal{overflow:hidden}.morning-copy,.story-content{min-width:0;min-height:0;overflow:auto;overflow-wrap:anywhere}
+.morning-modal{width:min(1080px,calc(100vw - 32px));grid-template-columns:minmax(300px,42%) minmax(0,1fr)}
+.wake-options button{grid-template-columns:minmax(72px,auto) minmax(0,1fr);column-gap:12px;overflow-wrap:anywhere}
+.wake-options span{font-size:17px;line-height:1.25}.wake-options small{font-size:10px;line-height:1.35}
+
+/* Dialogue is staged like a visual novel: bust on the left, one readable line at a time. */
+.visual-novel-dialogue{width:min(1180px,calc(100vw - 36px));height:min(720px,calc(100dvh - 36px));grid-template-columns:minmax(260px,31%) minmax(0,1fr);overflow:hidden}
+.visual-novel-dialogue .dialogue-speaker-bust{position:relative;min-width:0;min-height:0;justify-content:flex-start;padding:58px 26px 24px;overflow:hidden}
+.dialogue-portrait-stage{position:relative;isolation:isolate;display:grid;place-items:end center;width:min(230px,92%);height:250px;margin:0 auto 18px;transform-origin:50% 100%}
+.dialogue-portrait-stage:before{content:"";position:absolute;z-index:-2;inset:9% 4% 0;border-radius:48% 48% 16px 16px;background:radial-gradient(circle at 50% 32%,rgba(238,184,83,.25),rgba(6,19,36,.03) 58%,transparent 72%)}
+.dialogue-portrait-crop{position:relative;z-index:2;width:100%;height:100%;display:grid;place-items:end center;overflow:hidden;border-bottom:1px solid rgba(231,181,82,.5);filter:drop-shadow(0 15px 16px rgba(0,0,0,.34))}
+.dialogue-portrait-crop .pixel-portrait{width:200px!important;height:246px!important;margin:0!important;border:0!important;border-radius:46% 46% 10px 10px;box-shadow:none!important;background-color:transparent!important}
+.dialogue-portrait-glow{position:absolute;z-index:1;left:16%;right:16%;bottom:8px;height:34px;border-radius:50%;background:rgba(229,170,65,.25);filter:blur(15px);animation:vnPortraitGlow 2.3s ease-in-out infinite}
+.vn-speaker.is-entering .dialogue-portrait-stage{animation:vnBustEnter .7s cubic-bezier(.16,.9,.22,1) both}
+.vn-speaker.is-speaking .dialogue-portrait-stage{animation:vnBustTalk 1.05s ease-in-out infinite}
+.vn-speaker.is-listening .dialogue-portrait-stage{animation:vnBustListen .58s cubic-bezier(.2,.85,.25,1)}
+.vn-speaker.is-settled .dialogue-portrait-stage{animation:vnBustSettle .65s ease-out}
+@keyframes vnBustEnter{from{opacity:0;transform:translateX(-30px) translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes vnBustTalk{0%,100%{transform:translateY(0) rotate(0)}42%{transform:translateY(-4px) rotate(-.45deg) scale(1.008)}68%{transform:translateY(-1px) rotate(.35deg)}}
+@keyframes vnBustListen{0%{transform:rotate(-.8deg) translateY(-3px)}55%{transform:rotate(.45deg) translateY(1px)}100%{transform:none}}
+@keyframes vnBustSettle{from{transform:translateY(-5px) scale(1.01)}to{transform:none}}
+@keyframes vnPortraitGlow{50%{opacity:.55;transform:scaleX(1.1)}}
+.dialogue-speaker-bust>span{font-size:10px}.dialogue-speaker-bust h2{font-size:clamp(27px,2.5vw,38px);margin:6px 0}.dialogue-speaker-bust>small{font-size:10px}
+.visual-novel-dialogue .speaker-relationship{margin-top:auto;padding-top:13px}.visual-novel-dialogue .speaker-relationship>span,.visual-novel-dialogue .speaker-relationship>strong{font-size:9px}
+.visual-novel-dialogue .dialogue-content{min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:clamp(28px,3.4vw,48px)}
+.visual-novel-dialogue .dialogue-content>.eyebrow{padding-right:48px;font-size:10px;line-height:1.5}
+.dialogue-turn{min-width:0}.conversation-flow{min-width:0;flex-wrap:wrap}.conversation-flow i{flex:0 1 64px}.conversation-flow span{min-width:0;font-size:9px;overflow-wrap:anywhere}
+.dialogue-transcript{max-height:105px;margin:7px 0 14px;padding:7px;scrollbar-width:thin}.dialogue-transcript p{font-size:12px;line-height:1.4;padding:7px 10px}.dialogue-transcript p span{font-size:7px}
+.dialogue-line-stage{position:relative;display:flex;flex-direction:column;justify-content:center;min-height:clamp(170px,25vh,235px);margin:8px 0 16px;cursor:default}
+.dialogue-line-stage.is-typing{cursor:pointer}
+.visual-novel-dialogue .dialogue-line-stage blockquote{min-width:0;min-height:132px;margin:0;padding:25px 28px 29px;display:flex;align-items:center;font-size:clamp(21px,2vw,29px);line-height:1.48;overflow-wrap:anywhere}
+.dialogue-typewriter-text{white-space:pre-wrap}.dialogue-typewriter-caret{display:inline-block;width:3px;height:1.15em;margin-left:4px;background:#c8494d;vertical-align:-.17em;animation:vnCaret .72s steps(1) infinite}
+@keyframes vnCaret{50%{opacity:0}}
+.dialogue-reveal-hint{position:absolute;right:16px;bottom:8px;font-size:8px;color:#797364;letter-spacing:.02em}
+.dialogue-choices{min-width:0;gap:10px;transition:opacity .25s,transform .25s}.dialogue-choices.is-locked{opacity:.18;transform:translateY(7px);pointer-events:none}.dialogue-choices.is-ready{opacity:1;transform:none}.dialogue-choices button{min-width:0;min-height:62px;justify-content:center;padding:13px 52px 13px 18px}.dialogue-choices strong{font-size:17px;line-height:1.35;overflow-wrap:anywhere}
+.dialogue-response-pause{display:flex;align-items:center;gap:6px;margin-top:-3px;color:#8b7858;font-size:9px}.dialogue-response-pause i{width:6px;height:6px;border-radius:50%;background:#c6464c;animation:vnReplyDot .9s ease-in-out infinite}.dialogue-response-pause i:nth-child(3){animation-delay:.13s}.dialogue-response-pause i:nth-child(4){animation-delay:.26s}@keyframes vnReplyDot{50%{transform:translateY(-4px);background:#dda947}}
+
+/* Event art gets its own safe area, so the poster caption never sits behind it. */
+.event-reveal-modal{width:min(1080px,calc(100vw - 32px));grid-template-columns:minmax(280px,35%) minmax(0,1fr);overflow:hidden}
+.event-poster{min-width:0}.event-poster .event-art{left:18px!important;right:18px!important;top:94px!important;bottom:138px!important;height:auto!important;z-index:1}
+.event-poster>span,.event-poster>i,.event-poster>b{z-index:4}.event-poster>b{bottom:28px;font-size:clamp(39px,4vw,55px);line-height:.85;text-shadow:0 3px 12px rgba(0,0,0,.38)}
+.event-reveal-copy{min-width:0;min-height:0;overflow:auto;overflow-wrap:anywhere}.event-reveal-copy h2{font-size:clamp(30px,3vw,44px);overflow-wrap:anywhere}.event-reveal-copy>p:not(.eyebrow){font-size:17px}
+
+/* A café shift fills the visual viewport and both halves remain readable. */
+.cafe-shift-screen{height:100dvh;min-height:0;grid-template-rows:auto auto minmax(0,1fr);overflow:hidden}
+.cafe-shift-header{min-height:82px;padding:14px clamp(24px,4vw,60px)}.cafe-shift-header span{font-size:10px}.cafe-shift-header h2{font-size:clamp(25px,2.3vw,34px)}.shift-score span{font-size:9px}.shift-score strong{font-size:27px}
+.cafe-shift-progress{padding:9px}.cafe-shift-progress i{width:38px;height:38px;font-size:11px}
+.cafe-shift-layout{grid-template-columns:minmax(430px,.95fr) minmax(510px,1.05fr);min-width:0;min-height:0;overflow:hidden}
+.cafe-shift-scene,.cafe-order-card{min-width:0;min-height:0}.cafe-shift-scene{min-height:0;overflow:hidden}.shift-awning,.shift-menu,.shift-counter{display:none!important}
+.cafe-shift-scene:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,14,26,.04),rgba(4,13,25,.26) 68%,rgba(4,13,25,.65));pointer-events:none}
+.shift-customer{z-index:6;left:49%;top:auto;bottom:30%;align-items:flex-end}.shift-customer .pixel-portrait{width:150px!important;height:184px!important}.shift-customer>div:last-child{min-width:132px}.shift-customer span{font-size:9px}.shift-customer strong{font-size:25px}
+.shift-entrance{z-index:7;top:auto;bottom:9%;font-size:16px;line-height:1.45;backdrop-filter:blur(8px)}.shift-queue{z-index:7;bottom:20px}.shift-steam{display:none}
+.cafe-order-card{padding:clamp(22px,3vw,42px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}.cafe-order-card>p{font-size:10px}.cafe-order-card blockquote{margin:10px 0 12px;padding:17px 20px;font-size:clamp(18px,1.55vw,24px);line-height:1.42;overflow-wrap:anywhere}.cafe-order-card details{font-size:10px}.cafe-order-card details span{font-size:14px}.cafe-order-card h3{margin:16px 0 9px;font-size:22px}.cafe-order-choices{gap:8px}.cafe-order-choices button{min-height:62px;padding:11px 15px}.cafe-order-choices button span{font-size:9px}.cafe-order-choices button strong{font-size:16px;overflow-wrap:anywhere}.cafe-order-feedback{margin-top:12px;padding:12px 15px}.cafe-order-feedback>b{font-size:9px}.cafe-order-feedback p{margin:7px 0;font-size:15px}.cafe-order-feedback button{font-size:10px;padding:11px}
+
+@media (max-height:800px) and (min-width:1181px){
+  .game-header{height:68px;min-height:68px;flex-basis:68px}.game-header .brand-mini strong{font-size:15px}.game-header .header-actions button{padding:8px 10px}.left-panel,.right-panel{padding:12px}.dialogue-portrait-stage{height:220px}.dialogue-portrait-crop .pixel-portrait{height:218px!important;width:178px!important}.visual-novel-dialogue .dialogue-speaker-bust{padding-top:42px}.dialogue-line-stage{min-height:150px}.cafe-shift-header{min-height:68px;padding-top:10px;padding-bottom:10px}.cafe-shift-progress i{width:32px;height:32px}
+}
+
+@media (max-width:1180px){
+  .game-shell{height:auto;min-height:100dvh;overflow:auto}.game-layout{grid-template-columns:minmax(270px,320px) minmax(0,1fr);overflow:visible}.right-panel{grid-column:1/-1;display:block;border-left:0;border-top:1px solid #c18b33}.center-stage{min-height:620px}.game-footer{display:none}
+  .visual-novel-dialogue{grid-template-columns:minmax(230px,29%) minmax(0,1fr)}.dialogue-portrait-stage{width:190px;height:218px}.dialogue-portrait-crop .pixel-portrait{width:178px!important;height:218px!important}.visual-novel-dialogue .dialogue-content{padding:28px}.visual-novel-dialogue .dialogue-line-stage blockquote{font-size:22px}
+}
+
+@media (max-width:1050px){
+  .cafe-shift-screen{display:block;overflow:auto}.cafe-shift-layout{display:block;overflow:visible}.cafe-shift-scene{min-height:430px;border-right:0;border-bottom:1px solid #dca63f}.cafe-order-card{overflow:visible}.shift-customer{bottom:30%}.shift-entrance{bottom:7%}
+}
+
+@media (max-width:760px){
+  .game-shell{height:auto;min-height:100dvh;overflow:auto}.game-header{height:auto;min-height:74px;flex-basis:auto}.time-block{position:static;transform:none}.game-layout{display:flex;flex-direction:column}.center-stage{order:1;min-height:600px}.left-panel{order:2}.right-panel{order:3}.header-actions{max-width:100%;overflow-x:auto}
+  .modal-backdrop{padding:10px}.modal-backdrop>section,.dialogue-modal,.tutorial-modal,.story-modal,.morning-modal,.game-menu-modal,.journal-modal,.achievements-modal,.event-reveal-modal{max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px)}
+  .visual-novel-dialogue{display:grid;height:calc(100dvh - 20px);grid-template-columns:1fr;grid-template-rows:190px minmax(0,1fr);overflow:hidden}.visual-novel-dialogue .dialogue-speaker-bust{min-height:0;padding:15px 18px;display:grid;grid-template-columns:120px minmax(0,1fr);grid-template-rows:auto auto auto 1fr;text-align:left;border-right:0;border-bottom:2px solid #d2a246}.dialogue-portrait-stage{grid-row:1/5;width:105px;height:155px;margin:0 15px 0 0}.dialogue-portrait-crop .pixel-portrait{width:126px!important;height:155px!important}.dialogue-speaker-bust>span{align-self:end}.dialogue-speaker-bust h2{font-size:27px}.visual-novel-dialogue .speaker-relationship{margin:8px 0 0;padding-top:7px}.visual-novel-dialogue .dialogue-content{padding:20px 16px}.dialogue-transcript{max-height:82px}.dialogue-line-stage{min-height:142px}.visual-novel-dialogue .dialogue-line-stage blockquote{min-height:112px;padding:18px;font-size:19px}.dialogue-reveal-hint{font-size:7px}.dialogue-choices button{min-height:58px}.dialogue-choices strong{font-size:15px}
+  .morning-modal,.story-modal{grid-template-columns:1fr;overflow:auto}.window-view{min-height:210px}.morning-copy{overflow:visible;padding:26px 20px}.wake-options button{grid-template-columns:68px minmax(0,1fr)}
+  .event-reveal-modal{display:block;overflow:auto}.event-poster{min-height:320px;border-right:0;border-bottom:1px solid #e0a846}.event-poster .event-art{top:72px!important;bottom:82px!important;left:38%!important;right:14px!important}.event-poster>b{bottom:24px;font-size:34px}.event-reveal-copy{overflow:visible;padding:28px 20px}
+  .cafe-shift-header{min-height:0;padding:13px 16px}.cafe-shift-header h2{font-size:22px}.cafe-shift-progress{position:sticky;top:0;z-index:20}.cafe-shift-scene{min-height:390px}.shift-customer{left:44%;bottom:31%;transform:translateX(-44%)}.shift-customer .pixel-portrait{width:118px!important;height:145px!important}.shift-customer>div:last-child{min-width:0}.shift-entrance{left:14px;right:14px;font-size:14px}.cafe-order-card{padding:24px 16px}.cafe-order-card blockquote{font-size:18px}.cafe-order-choices button strong{font-size:14px}
+}
+
+@media (prefers-reduced-motion:reduce){.dialogue-portrait-stage,.dialogue-portrait-glow,.dialogue-typewriter-caret,.dialogue-response-pause i{animation:none!important}.dialogue-choices{transition:none}}

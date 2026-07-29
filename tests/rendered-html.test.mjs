@@ -87,6 +87,10 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(page, /dialoguePendingRelationship/);
   assert.match(page, /weekSchedule/);
   assert.match(page, /currentWeekday/);
+  assert.match(page, /dialogueVisibleText/);
+  assert.match(page, /dialogueTurnPhase/);
+  assert.match(page, /recentCafeOrderIds/);
+  assert.match(page, /shuffleItems/);
   assert.match(page, /ОБЯЗАННОСТИ НА СЕГОДНЯ/);
   assert.match(page, /parisDistricts/);
   assert.match(page, /BOULEVARD PÉRIPHÉRIQUE/);
@@ -101,6 +105,11 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.doesNotMatch(page, /РАЗГОВОР \{activeDialogueIndex \+ 1\} ИЗ/);
   assert.doesNotMatch(page, /type="range"/);
   assert.doesNotMatch(page, /Разобрать письма|Приготовить ужин/);
+  assert.doesNotMatch(page, /sort\(\(\) => Math\.random\(\) - 0\.5\)/);
+  const cafePoolSource = page.slice(page.indexOf("const cafeOrderPool"), page.indexOf("function shuffleItems"));
+  const cafeOrderIds = [...cafePoolSource.matchAll(/\n\s+id: "([^"]+)"/g)].map((match) => match[1]);
+  assert.ok(cafeOrderIds.length >= 20);
+  assert.equal(new Set(cafeOrderIds).size, cafeOrderIds.length);
   assert.match(css, /pixel-portrait/);
   assert.match(css, /sky-sunset/);
   assert.match(css, /world-scene/);
@@ -139,6 +148,9 @@ test("keeps the requested gameplay systems in the product source", async () => {
   assert.match(css, /week-agenda-card/);
   assert.match(css, /week-duty\.late/);
   assert.match(css, /metro-map-floating-controls/);
+  assert.match(css, /dialogue-typewriter-text/);
+  assert.match(css, /vnBustTalk/);
+  assert.match(css, /clip-path:none!important/);
   const parsedMap = JSON.parse(metroMap);
   assert.equal(parsedMap.lines.length, 16);
   assert.ok(parsedMap.stations.length >= 300);
